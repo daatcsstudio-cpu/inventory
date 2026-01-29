@@ -815,8 +815,6 @@
     // --- Lógica Bluetooth (Web Bluetooth API) ---
     async function conectarBluetooth() {
         try {
-            if (!navigator.bluetooth) throw new Error("Navegador no compatible (Usa Bluefy o Chrome)");
-
             // Solicitar dispositivo (acepta todos para encontrar la MTH)
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,

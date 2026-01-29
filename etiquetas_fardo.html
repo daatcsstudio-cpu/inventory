@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Etiquetas por Fardo</title>
     <script src="formato_etiqueta_producto_terminado.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
     <style>
         :root {
             --primary: #1A237E;
@@ -237,7 +236,6 @@
                     ancho: parseFloat(getVal(['Ancho "', 'Ancho', 'ancho'])) || 0,
                     m2: 0,
                     pt: 0,
-                    unidad: (getVal(['Producto', 'Calidad', 'producto']) || '').toLowerCase().includes('tranquilla') ? 'ml' : 'm2',
                     detalles: []
                 };
             }
@@ -345,8 +343,6 @@
 
     async function conectarBluetooth() {
         try {
-            if (!navigator.bluetooth) throw new Error("Navegador no compatible");
-
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
                 optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
@@ -357,27 +353,16 @@
             alert("✅ Conectado a " + bluetoothDevice.name);
         } catch (error) {
             console.log(error);
-            if (error.message.includes("Navegador")) {
-                alert("❌ Tu navegador no soporta Bluetooth.\n- iPhone: Usa Bluefy.\n- Android: Usa Chrome.");
-            } else if (error.name === 'NotFoundError') {
-                // Usuario canceló la búsqueda, no mostrar alerta molesta
-            } else {
-                alert("❌ Error de conexión:\n" + error.message + "\n\nTips: Enciende la impresora, activa GPS (Android) y Bluetooth.");
-            }
+            alert("No se pudo conectar. Intenta de nuevo.");
         }
     }
 
     async function imprimirFardoIndividual(index) {
-        try {
-            if (!printCharacteristic) {
-                await conectarBluetooth();
-                if (!printCharacteristic) return;
-            }
-            await enviarComandoEtiqueta(fardosDelLote[index]);
-        } catch (error) {
-            alert("❌ Error al enviar a impresora:\n" + error.message);
-            printCharacteristic = null; // Reiniciar conexión por si acaso
+        if (!printCharacteristic) {
+            await conectarBluetooth();
+            if (!printCharacteristic) return;
         }
+        await enviarComandoEtiqueta(fardosDelLote[index]);
     }
 
     // Función auxiliar para generar el HTML de una etiqueta
@@ -486,24 +471,19 @@
     }
 
     async function imprimirTodoElLote() {
-        try {
-            if (!printCharacteristic) {
-                await conectarBluetooth();
-                if (!printCharacteristic) return;
-            }
-
-            if (!confirm(`¿Estás seguro de imprimir ${fardosDelLote.length} etiquetas? Asegúrate de tener papel.`)) return;
-
-            for (const fardo of fardosDelLote) {
-                await enviarComandoEtiqueta(fardo);
-                // Pequeña pausa entre etiquetas para no saturar
-                await new Promise(r => setTimeout(r, 500));
-            }
-            alert("✅ Impresión masiva finalizada.");
-        } catch (error) {
-            alert("❌ Error en impresión masiva:\n" + error.message);
-            printCharacteristic = null;
+        if (!printCharacteristic) {
+            await conectarBluetooth();
+            if (!printCharacteristic) return;
         }
+
+        if (!confirm(`¿Estás seguro de imprimir ${fardosDelLote.length} etiquetas? Asegúrate de tener papel.`)) return;
+
+        for (const fardo of fardosDelLote) {
+            await enviarComandoEtiqueta(fardo);
+            // Pequeña pausa entre etiquetas para no saturar
+            await new Promise(r => setTimeout(r, 500));
+        }
+        alert("✅ Impresión masiva finalizada.");
     }
 
     async function enviarComandoEtiqueta(f) {
