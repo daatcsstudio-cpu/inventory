@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Iconos Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SheetJS para Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         /* Ocultar scrollbar en la sidebar pero permitir scroll */
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -134,57 +136,75 @@
                             <h1 class="text-2xl font-bold text-slate-800">Resumen General</h1>
                             <p class="text-slate-500 text-sm">Bienvenido al panel de control de inventario.</p>
                         </div>
-                        <button class="px-4 py-2 bg-white border border-gray-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
+                        <button onclick="exportarDatos()" class="px-4 py-2 bg-white border border-gray-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
                             <i data-lucide="download" class="w-4 h-4"></i> Exportar Datos
                         </button>
                     </div>
 
-                    <!-- Tarjetas de Estadísticas -->
+                    <!-- Tarjetas de Estadísticas Dinámicas -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <!-- Card 1 -->
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
+                        <!-- Card 1: Piso Barnizado -->
+                        <div onclick="filtrarDetalle('Piso Barnizado')" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="p-3 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
                                     <i data-lucide="package" class="w-6 h-6"></i>
                                 </div>
-                                <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">+12%</span>
                             </div>
-                            <h3 class="text-slate-500 text-sm font-medium">Total Fardos</h3>
-                            <p class="text-2xl font-bold text-slate-800 mt-1">1,248</p>
+                            <h3 class="text-slate-500 text-sm font-medium">Piso Barnizado (m²)</h3>
+                            <p id="total-barnizado" class="text-2xl font-bold text-slate-800 mt-1">Cargando...</p>
                         </div>
 
-                        <!-- Card 2 -->
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="p-3 bg-amber-50 text-amber-600 rounded-lg group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
-                                </div>
-                                <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-full">Atención</span>
-                            </div>
-                            <h3 class="text-slate-500 text-sm font-medium">Alertas Stock</h3>
-                            <p class="text-2xl font-bold text-slate-800 mt-1">5</p>
-                        </div>
-
-                        <!-- Card 3 -->
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
+                        <!-- Card 2: Piso Crudo -->
+                        <div onclick="filtrarDetalle('Piso Crudo')" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="p-3 bg-purple-50 text-purple-600 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors">
                                     <i data-lucide="layers" class="w-6 h-6"></i>
                                 </div>
                             </div>
-                            <h3 class="text-slate-500 text-sm font-medium">Último Lote</h3>
-                            <p class="text-2xl font-bold text-slate-800 mt-1">L-2024-08</p>
+                            <h3 class="text-slate-500 text-sm font-medium">Piso Crudo (m²)</h3>
+                            <p id="total-crudo" class="text-2xl font-bold text-slate-800 mt-1">Cargando...</p>
                         </div>
 
-                        <!-- Card 4 -->
+                        <!-- Card 3: Tranquilla -->
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                                     <i data-lucide="ruler" class="w-6 h-6"></i>
                                 </div>
                             </div>
-                            <h3 class="text-slate-500 text-sm font-medium">M2 Procesados</h3>
-                            <p class="text-2xl font-bold text-slate-800 mt-1">45,230</p>
+                            <h3 class="text-slate-500 text-sm font-medium">Tranquilla (ml)</h3>
+                            <p id="total-tranquilla" class="text-2xl font-bold text-slate-800 mt-1">Cargando...</p>
+                        </div>
+
+                        <!-- Card 4: Madera Aserrada -->
+                        <div onclick="mostrarDetalleAserrada()" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-green-50 text-green-600 rounded-lg group-hover:bg-green-600 group-hover:text-white transition-colors">
+                                    <i data-lucide="database" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                            <h3 class="text-slate-500 text-sm font-medium">Madera Aserrada (PT)</h3>
+                            <p id="total-aserrada" class="text-2xl font-bold text-slate-800 mt-1">Cargando...</p>
+                        </div>
+                    </div>
+
+                    <!-- Tabla Pivot Producto Terminado -->
+                    <div id="pivot-table-container" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6" style="display: none;">
+                        <h2 id="pivot-table-title" class="text-xl font-bold text-slate-800 mb-4"></h2>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm text-left text-slate-600">
+                                <thead id="pte-table-head" class="text-xs text-slate-700 uppercase bg-gray-50"></thead>
+                                <tbody id="pte-table-body"></tbody>
+                                <tfoot id="pte-table-foot" class="font-bold text-slate-800 bg-gray-50"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Detalle Madera Aserrada -->
+                    <div id="aserrada-detail-container" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" style="display: none;">
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Detalle: Inventario de Madera Aserrada (Pies Tablares)</h2>
+                        <div id="detalle-aserrada" class="space-y-4 max-h-96 overflow-y-auto">
+                            <p class="text-slate-500">Cargando detalles...</p>
                         </div>
                     </div>
                 </div>
@@ -193,7 +213,6 @@
                 <div id="view-frame-container" class="hidden w-full h-full">
                     <iframe id="content-frame" class="w-full h-full border-none" src=""></iframe>
                 </div>
-
             </main>
         </div>
     </div>
@@ -207,6 +226,223 @@
         const frameContainer = document.getElementById('view-frame-container');
         const frame = document.getElementById('content-frame');
         const mobileTitle = document.getElementById('mobile-title');
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJm67IZXi_zHsxQv3mqosqb6-RyKp4-j-h-kqdP153HTN8t6lt7BPE5BrwSzphArkx/exec";
+        let globalDataPTE = []; // Variable global para almacenar datos
+
+        function loadDashboardData() {
+            const fetchPTE = fetch(GOOGLE_SCRIPT_URL + "?sheet=PRODUCTO TERMINADO").then(res => res.json());
+            const fetchMDA = fetch(GOOGLE_SCRIPT_URL + "?sheet=MADERA ASERRADA").then(res => res.json());
+
+            Promise.all([fetchPTE, fetchMDA])
+                .then(([dataPTE, dataMDA]) => {
+                    globalDataPTE = dataPTE; // Guardar datos para filtrado posterior
+
+                    // Procesar Producto Terminado
+                    let totalCrudoM2 = 0;
+                    let totalBarnizadoM2 = 0;
+                    let totalTranquillaML = 0;
+
+                    dataPTE.forEach(row => {
+                        const producto = (row['Producto'] || row['Calidad'] || '').toLowerCase();
+                        const metros = parseFloat(row['M2'] || 0);
+                        const unidad = (row['Unidad'] || 'm2').toLowerCase();
+
+                        if (producto.includes('piso crudo')) {
+                            totalCrudoM2 += metros;
+                        } else if (producto.includes('piso barnizado')) {
+                            totalBarnizadoM2 += metros;
+                        } else if (producto.includes('tranquilla')) {
+                            if (unidad === 'ml') totalTranquillaML += metros;
+                        }
+                    });
+
+                    // Procesar Madera Aserrada
+                    let totalPiesTablares = 0;
+                    const porEspecie = {};
+                    dataMDA.forEach(row => {
+                        const pt = parseFloat(row['PIES TABLARES'] || 0);
+                        totalPiesTablares += pt;
+                        const especie = row['ESPECIE'] || 'Desconocida';
+                        const calidad = row['CALIDAD'] || 'Sin Calidad';
+                        if (!porEspecie[especie]) porEspecie[especie] = { total: 0, calidades: {} };
+                        porEspecie[especie].total += pt;
+                        porEspecie[especie].calidades[calidad] = (porEspecie[especie].calidades[calidad] || 0) + pt;
+                    });
+
+                    // Actualizar Tarjetas
+                    document.getElementById('total-barnizado').innerText = totalBarnizadoM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    document.getElementById('total-crudo').innerText = totalCrudoM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    document.getElementById('total-tranquilla').innerText = totalTranquillaML.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    document.getElementById('total-aserrada').innerText = totalPiesTablares.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                    // Renderizar Tabla Pivot Inicial (Sin filtro)
+                    renderPivotTable();
+
+                    // Actualizar detalle de madera aserrada
+                    const detalleContainer = document.getElementById('detalle-aserrada');
+                    detalleContainer.innerHTML = '';
+                    if (Object.keys(porEspecie).length > 0) {
+                        Object.keys(porEspecie).sort().forEach(especie => {
+                            const especieData = porEspecie[especie];
+                            let calidadesHTML = '<div class="pl-6 mt-2 space-y-1">';
+                            Object.keys(especieData.calidades).sort().forEach(calidad => {
+                                calidadesHTML += `<div class="flex justify-between text-sm text-slate-600"><span>- ${calidad}</span><span class="font-mono">${especieData.calidades[calidad].toLocaleString('es', { maximumFractionDigits: 2 })} PT</span></div>`;
+                            });
+                            calidadesHTML += '</div>';
+                            detalleContainer.innerHTML += `<div class="pb-2 border-b border-gray-100"><div class="flex justify-between items-center"><span class="font-bold text-slate-700">${especie}</span><span class="font-bold text-lg text-blue-600">${especieData.total.toLocaleString('es', { maximumFractionDigits: 2 })} PT</span></div>${calidadesHTML}</div>`;
+                        });
+                    } else {
+                        detalleContainer.innerHTML = '<p class="text-slate-500">No hay datos de madera aserrada.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error("Error cargando datos del dashboard:", error);
+                    const errorMsg = "Error";
+                    document.getElementById('total-barnizado').innerText = errorMsg;
+                    document.getElementById('total-crudo').innerText = errorMsg;
+                    document.getElementById('total-tranquilla').innerText = errorMsg;
+                    document.getElementById('total-aserrada').innerText = errorMsg;
+                    document.getElementById('detalle-aserrada').innerHTML = '<p class="text-red-500">No se pudieron cargar los detalles.</p>';
+                });
+        }
+
+        function filtrarDetalle(filtro) {
+            document.getElementById('pivot-table-container').style.display = 'block';
+            document.getElementById('aserrada-detail-container').style.display = 'none';
+
+            renderPivotTable(filtro);
+            // Scroll suave hacia la tabla
+            const tableContainer = document.getElementById('pivot-table-container');
+            if(tableContainer) tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function mostrarDetalleAserrada() {
+            document.getElementById('pivot-table-container').style.display = 'none';
+            document.getElementById('aserrada-detail-container').style.display = 'block';
+
+            // Scroll suave hacia la tabla
+            const aserradaContainer = document.getElementById('aserrada-detail-container');
+            if(aserradaContainer) aserradaContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderPivotTable(filtro = null) {
+            const ptePivot = {};
+            const allDims = new Set();
+            const allSpecies = new Set();
+            
+            // Actualizar título
+            const titleEl = document.getElementById('pivot-table-title');
+            if (titleEl) {
+                titleEl.innerText = filtro 
+                    ? `Detalle: ${filtro} (M² por Especie y Dimensión)` 
+                    : "Resumen Producto Terminado (M² por Especie y Dimensión)";
+            }
+
+            globalDataPTE.forEach(row => {
+                const producto = (row['Producto'] || row['Calidad'] || '').toLowerCase();
+                const metros = parseFloat(row['M2'] || 0);
+                const unidad = (row['Unidad'] || 'm2').toLowerCase();
+                
+                // Filtro
+                if (filtro && !producto.includes(filtro.toLowerCase())) return;
+
+                // Lógica Pivot (Solo M2 para Piso)
+                const esp = row['Especie'] || 'Sin Especie';
+                const grosor = row['Grosor "'] || row['Grosor'];
+                const ancho = row['Ancho "'] || row['Ancho'];
+                
+                if (grosor && ancho && metros > 0 && unidad !== 'ml') { 
+                        const dim = `${grosor} x ${ancho}`;
+                        allDims.add(dim);
+                        allSpecies.add(esp);
+                        
+                        if (!ptePivot[esp]) ptePivot[esp] = {};
+                        if (!ptePivot[esp][dim]) ptePivot[esp][dim] = 0;
+                        ptePivot[esp][dim] += metros;
+                }
+            });
+
+            // Renderizar HTML
+            const sortedDims = Array.from(allDims).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+            const sortedSpecies = Array.from(allSpecies).sort();
+            
+            const thead = document.getElementById('pte-table-head');
+            const tbody = document.getElementById('pte-table-body');
+            const tfoot = document.getElementById('pte-table-foot');
+            
+            if (thead && tbody && tfoot) {
+                let headerHTML = '<tr><th class="px-4 py-2 border-b">Especie</th>';
+                sortedDims.forEach(d => headerHTML += `<th class="px-4 py-2 border-b text-right">${d}</th>`);
+                headerHTML += '<th class="px-4 py-2 border-b text-right bg-gray-100">Total M²</th></tr>';
+                thead.innerHTML = headerHTML;
+
+                let bodyHTML = '';
+                const colTotals = {};
+                sortedDims.forEach(d => colTotals[d] = 0);
+                let grandTotal = 0;
+
+                sortedSpecies.forEach(esp => {
+                    let rowHTML = `<tr class="hover:bg-gray-50 border-b"><td class="px-4 py-2 font-medium">${esp}</td>`;
+                    let rowTotal = 0;
+                    sortedDims.forEach(dim => {
+                        const val = ptePivot[esp][dim] || 0;
+                        rowTotal += val;
+                        colTotals[dim] += val;
+                        rowHTML += `<td class="px-4 py-2 text-right">${val > 0 ? val.toFixed(2) : '-'}</td>`;
+                    });
+                    grandTotal += rowTotal;
+                    rowHTML += `<td class="px-4 py-2 text-right font-bold bg-gray-50">${rowTotal.toFixed(2)}</td></tr>`;
+                    bodyHTML += rowHTML;
+                });
+                tbody.innerHTML = bodyHTML;
+
+                let footerHTML = '<tr><td class="px-4 py-2 border-t">M2 por dimensión</td>';
+                sortedDims.forEach(dim => {
+                    footerHTML += `<td class="px-4 py-2 border-t text-right">${colTotals[dim].toFixed(2)}</td>`;
+                });
+                footerHTML += `<td class="px-4 py-2 border-t text-right bg-gray-100">${grandTotal.toFixed(2)}</td></tr>`;
+                tfoot.innerHTML = footerHTML;
+            }
+        }
+
+        function exportarDatos() {
+            const btn = document.querySelector('button[onclick="exportarDatos()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Exportando...';
+            lucide.createIcons();
+            btn.disabled = true;
+
+            const fetchPTE = fetch(GOOGLE_SCRIPT_URL + "?sheet=PRODUCTO TERMINADO").then(res => res.json());
+            const fetchMDA = fetch(GOOGLE_SCRIPT_URL + "?sheet=MADERA ASERRADA").then(res => res.json());
+
+            Promise.all([fetchPTE, fetchMDA])
+                .then(([dataPTE, dataMDA]) => {
+                    const wb = XLSX.utils.book_new();
+                    
+                    // Hoja 1: Producto Terminado
+                    if (dataPTE && dataPTE.length > 0) {
+                        const wsPTE = XLSX.utils.json_to_sheet(dataPTE);
+                        XLSX.utils.book_append_sheet(wb, wsPTE, "Producto Terminado");
+                    }
+
+                    // Hoja 2: Madera Aserrada
+                    if (dataMDA && dataMDA.length > 0) {
+                        const wsMDA = XLSX.utils.json_to_sheet(dataMDA);
+                        XLSX.utils.book_append_sheet(wb, wsMDA, "Madera Aserrada");
+                    }
+
+                    XLSX.writeFile(wb, "Resumen_Inventario_Completo.xlsx");
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Error al exportar datos. Revisa la consola.");
+                })
+                .finally(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    lucide.createIcons(); // Re-renderizar icono original
+                });
+        }
 
         function toggleSidebar() {
             sidebar.classList.toggle('-translate-x-full');
@@ -242,6 +478,9 @@
                 frame.src = url; // Cargar archivo HTML externo
             }
         }
+
+        // Cargar datos al iniciar
+        loadDashboardData();
     </script>
 </body>
 </html>

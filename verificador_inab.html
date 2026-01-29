@@ -66,7 +66,7 @@
     <h2>🌲 Verificador INAB</h2>
     <p style="text-align:center; font-size:0.9rem; color:#7f8c8d;">Lotes pendientes de subir volumen a Industria Forestal</p>
     
-    <div id="loading">Cargando inventario...</div>
+    <div id="loading">🔄 Conectando con Base de Datos...</div>
     <div id="lista-lotes"></div>
 </div>
 
@@ -149,7 +149,7 @@
             card.innerHTML = `
                 <div class="lote-header">
                     <div class="lote-title">📦 Lote: ${l.id}</div>
-                    <div class="lote-vol">${l.m3.toFixed(3)} m³</div>
+                    <div class="lote-vol">${l.m3.toFixed(2)} m³</div>
                 </div>
                 <div style="font-size:0.9rem; color:#666; margin-bottom:10px;">${l.producto} (${l.count} fardos)</div>
                 <span class="status-text">⚠️ Pendiente de subir volumen Industria Forestal</span>
@@ -178,10 +178,14 @@
             method: "POST",
             body: JSON.stringify(payload)
         })
-        .then(res => {
-            alert("✅ Lote actualizado correctamente.");
-            // Recargar para quitar de la lista
-            cargarDatos();
+        .then(res => res.json())
+        .then(data => {
+            if (data.result === "success") {
+                alert("✅ Lote actualizado correctamente.");
+                cargarDatos();
+            } else {
+                throw new Error(data.message || "Error desconocido del servidor");
+            }
         })
         .catch(err => {
             alert("❌ Error al actualizar: " + err);

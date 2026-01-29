@@ -103,7 +103,7 @@
 
         function cargarInventario() {
             const status = document.getElementById('status');
-            status.innerText = "🔄 Descargando datos de Madera Aserrada...";
+            status.innerText = "🔄 Conectando con Base de Datos...";
             
             // Pedimos explícitamente la hoja "MADERA ASERRADA"
             fetch(GOOGLE_SCRIPT_URL + "?sheet=MADERA ASERRADA")
