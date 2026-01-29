@@ -219,6 +219,7 @@
                     ancho: parseFloat(getVal(['Ancho "', 'Ancho', 'ancho'])) || 0,
                     m2: 0,
                     pt: 0,
+                    unidad: (getVal(['Producto', 'Calidad', 'producto']) || '').toLowerCase().includes('tranquilla') ? 'ml' : 'm2',
                     detalles: []
                 };
             }
@@ -339,19 +340,16 @@
         } catch (error) {
             console.log(error);
             if (error.message.includes("Navegador")) {
-                alert("❌ Tu navegador no soporta Bluetooth.\nUsa Chrome o Bluefy.");
+                alert("❌ Tu navegador no soporta Bluetooth.\n- iPhone: Usa Bluefy.\n- Android: Usa Chrome.");
+            } else if (error.name === 'NotFoundError') {
+                // Usuario canceló la búsqueda, no mostrar alerta molesta
             } else {
-                alert("❌ No se pudo conectar.\nVerifica que la impresora esté encendida y cerca.");
+                alert("❌ Error de conexión:\n" + error.message + "\n\nTips: Enciende la impresora, activa GPS (Android) y Bluetooth.");
             }
         }
     }
 
     async function imprimirFardoIndividual(index) {
-        if (!navigator.bluetooth) {
-            alert("❌ Tu navegador no soporta Bluetooth Web.\n\n- En Android/PC: Usa Google Chrome.\n- En iPhone/iPad: Usa la App 'Bluefy'.");
-            return;
-        }
-
         try {
             if (!printCharacteristic) {
                 await conectarBluetooth();
@@ -470,11 +468,6 @@
     }
 
     async function imprimirTodoElLote() {
-        if (!navigator.bluetooth) {
-            alert("❌ Tu navegador no soporta Bluetooth Web.\n\n- En Android/PC: Usa Google Chrome.\n- En iPhone/iPad: Usa la App 'Bluefy'.");
-            return;
-        }
-
         try {
             if (!printCharacteristic) {
                 await conectarBluetooth();
