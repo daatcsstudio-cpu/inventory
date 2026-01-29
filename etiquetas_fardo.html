@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Etiquetas por Fardo</title>
     <script src="formato_etiqueta_producto_terminado.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
     <style>
         :root {
             --primary: #1A237E;
@@ -80,6 +81,28 @@
         }
 
         #results-area { display: none; }
+
+        /* Estilos para impresión PC (Etiqueta 4x3) */
+        #label-template {
+            display: none;
+            background: white;
+            width: 4in;
+            height: 3in;
+            padding: 5px 10px;
+            flex-direction: column;
+            overflow: hidden;
+            align-items: center;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        @media print {
+            @page { size: 4in 3in; margin: 0mm; }
+            body * { visibility: hidden; }
+            #label-template, #label-template * { visibility: visible; }
+            #label-template { position: fixed; left: 0; top: 0; display: flex; border: none; }
+        }
+        .print-col-header { border-bottom: 1px solid #000; margin-bottom: 2px; font-size: 0.9rem; font-weight: bold; }
+        .print-val { font-size: 1rem; }
     </style>
 </head>
 <body>
@@ -111,6 +134,32 @@
     </div>
 
     <!-- <a href="menu_terminado.html" class="btn-back">⬅ Volver al Menú</a> -->
+</div>
+
+<!-- Plantilla Oculta para Impresión PC -->
+<div id="label-template">
+    <svg id="barcode"></svg>
+    <div id="printLote" style="font-weight:bold; font-size: 1.1rem; margin-top: 2px;">Lote: ---</div>
+    <div id="printFardoM2" style="font-weight:bold; font-size: 1rem; margin-bottom: 5px;">Fardo: --- - --- M2</div>
+    
+    <div style="width:100%; border-bottom: 2px solid black; margin-bottom: 5px;"></div>
+    
+    <div id="printProducto" style="font-weight:bold; font-size: 1rem;">Producto ---</div>
+    <div id="printEspecie" style="font-size: 0.9rem;">Especie: ---</div>
+
+    <div style="width:100%; border-bottom: 2px solid black; margin: 5px 0;"></div>
+
+    <div style="display: flex; justify-content: space-between; flex-grow: 1; width: 100%;">
+        <div style="width:48%;">
+            <div class="print-col-header">Piezas</div>
+            <div id="printPiezasCol"></div>
+        </div>
+        <div style="width:48%;">
+            <div class="print-col-header">Largo</div>
+            <div id="printLargosCol"></div>
+        </div>
+    </div>
+    <div style="width:100%; border-top: 2px solid black; margin-top: auto; padding-top: 5px; display:flex; justify-content:space-between; font-weight:bold;"><span id="printTotalPzs">Pzs: 0</span><span id="printTotalM2">Total: 0.00</span></div>
 </div>
 
 <script>
@@ -306,6 +355,47 @@
             if (!printCharacteristic) return;
         }
         await enviarComandoEtiqueta(fardosDelLote[index]);
+    }
+
+    function imprimirFardoIndividualPC(index) {
+        const f = fardosDelLote[index];
+        
+        // Generar Código de Barras
+        if (typeof JsBarcode !== 'undefined') {
+            JsBarcode("#barcode", f.fardoNo, {
+                format: "CODE128", displayValue: false, height: 40, width: 2, margin: 0
+            });
+        }
+        
+        // Llenar datos
+        document.getElementById('printLote').innerText = "Lote: " + f.lote;
+        const unidad = (f.producto && f.producto.toLowerCase().includes('tranquilla')) ? 'ML' : 'M2';
+        document.getElementById('printFardoM2').innerText = `Fardo: ${f.fardoNo} - ${f.m2} ${unidad}`;
+        document.getElementById('printProducto').innerText = `${f.producto} ${f.grosor || ''} x ${f.ancho || ''}"`;
+        document.getElementById('printEspecie').innerText = "Especie: " + f.especie;
+        
+        const colPiezas = document.getElementById('printPiezasCol');
+        const colLargos = document.getElementById('printLargosCol');
+        colPiezas.innerHTML = "";
+        colLargos.innerHTML = "";
+        
+        let totalPzs = 0;
+        if (f.detalles && f.detalles.length > 0) {
+            f.detalles.forEach(d => {
+                colPiezas.innerHTML += `<div class="print-val">${d.piezas}</div>`;
+                colLargos.innerHTML += `<div class="print-val">${d.largo}</div>`;
+                totalPzs += parseInt(d.piezas) || 0;
+            });
+        } else {
+            colPiezas.innerHTML = "<div>-</div>";
+            colLargos.innerHTML = "<div>-</div>";
+        }
+        
+        document.getElementById('printTotalPzs').innerText = `Pzs: ${totalPzs}`;
+        document.getElementById('printTotalM2').innerText = `Total: ${f.m2} ${unidad}`;
+
+        // Imprimir
+        window.print();
     }
 
     async function imprimirTodoElLote() {
