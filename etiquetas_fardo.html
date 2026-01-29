@@ -358,44 +358,57 @@
     }
 
     function imprimirFardoIndividualPC(index) {
-        const f = fardosDelLote[index];
-        
-        // Generar Código de Barras
-        if (typeof JsBarcode !== 'undefined') {
-            JsBarcode("#barcode", f.fardoNo, {
-                format: "CODE128", displayValue: false, height: 40, width: 2, margin: 0
-            });
-        }
-        
-        // Llenar datos
-        document.getElementById('printLote').innerText = "Lote: " + f.lote;
-        const unidad = (f.producto && f.producto.toLowerCase().includes('tranquilla')) ? 'ML' : 'M2';
-        document.getElementById('printFardoM2').innerText = `Fardo: ${f.fardoNo} - ${f.m2} ${unidad}`;
-        document.getElementById('printProducto').innerText = `${f.producto} ${f.grosor || ''} x ${f.ancho || ''}"`;
-        document.getElementById('printEspecie').innerText = "Especie: " + f.especie;
-        
-        const colPiezas = document.getElementById('printPiezasCol');
-        const colLargos = document.getElementById('printLargosCol');
-        colPiezas.innerHTML = "";
-        colLargos.innerHTML = "";
-        
-        let totalPzs = 0;
-        if (f.detalles && f.detalles.length > 0) {
-            f.detalles.forEach(d => {
-                colPiezas.innerHTML += `<div class="print-val">${d.piezas}</div>`;
-                colLargos.innerHTML += `<div class="print-val">${d.largo}</div>`;
-                totalPzs += parseInt(d.piezas) || 0;
-            });
-        } else {
-            colPiezas.innerHTML = "<div>-</div>";
-            colLargos.innerHTML = "<div>-</div>";
-        }
-        
-        document.getElementById('printTotalPzs').innerText = `Pzs: ${totalPzs}`;
-        document.getElementById('printTotalM2').innerText = `Total: ${f.m2} ${unidad}`;
+        try {
+            const f = fardosDelLote[index];
+            if (!f) { alert("Error: No se encontraron datos del fardo."); return; }
+            
+            // Generar Código de Barras (con manejo de error si no carga la librería)
+            if (typeof JsBarcode !== 'undefined') {
+                try {
+                    JsBarcode("#barcode", String(f.fardoNo), {
+                        format: "CODE128", displayValue: false, height: 40, width: 2, margin: 0
+                    });
+                } catch (e) { console.error("Error barcode:", e); }
+            } else {
+                console.warn("Librería JsBarcode no cargada (¿Sin internet?)");
+            }
+            
+            // Helper para asignar texto seguro
+            const setTxt = (id, txt) => { const el = document.getElementById(id); if(el) el.innerText = txt; };
 
-        // Imprimir
-        window.print();
+            // Llenar datos
+            setTxt('printLote', "Lote: " + (f.lote || '---'));
+            const unidad = (f.producto && f.producto.toLowerCase().includes('tranquilla')) ? 'ML' : 'M2';
+            setTxt('printFardoM2', `Fardo: ${f.fardoNo} - ${f.m2} ${unidad}`);
+            setTxt('printProducto', `${f.producto || ''} ${f.grosor || ''} x ${f.ancho || ''}"`);
+            setTxt('printEspecie', "Especie: " + (f.especie || '---'));
+            
+            const colPiezas = document.getElementById('printPiezasCol');
+            const colLargos = document.getElementById('printLargosCol');
+            if(colPiezas) colPiezas.innerHTML = "";
+            if(colLargos) colLargos.innerHTML = "";
+            
+            let totalPzs = 0;
+            if (f.detalles && f.detalles.length > 0) {
+                f.detalles.forEach(d => {
+                    if(colPiezas) colPiezas.innerHTML += `<div class="print-val">${d.piezas}</div>`;
+                    if(colLargos) colLargos.innerHTML += `<div class="print-val">${d.largo}</div>`;
+                    totalPzs += parseInt(d.piezas) || 0;
+                });
+            } else {
+                if(colPiezas) colPiezas.innerHTML = "<div>-</div>";
+                if(colLargos) colLargos.innerHTML = "<div>-</div>";
+            }
+            
+            setTxt('printTotalPzs', `Pzs: ${totalPzs}`);
+            setTxt('printTotalM2', `Total: ${f.m2} ${unidad}`);
+
+            // Imprimir con pequeño retardo para asegurar renderizado
+            setTimeout(() => window.print(), 200);
+        } catch (err) {
+            alert("Ocurrió un error al intentar imprimir: " + err.message);
+            console.error(err);
+        }
     }
 
     async function imprimirTodoElLote() {
