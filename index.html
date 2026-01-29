@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Selección de Inventario</title>
+    <style>
+        :root {
+            --primary: #1A237E;
+            --bg: #F5F7F9;
+            --card-bg: #FFFFFF;
+            --text-dark: #2c3e50;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+            color: var(--text-dark);
+        }
+        h1 {
+            color: var(--primary);
+            margin-bottom: 40px;
+        }
+        .menu-button {
+            display: block;
+            width: 80%;
+            max-width: 300px;
+            padding: 25px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            color: var(--primary);
+            background-color: var(--card-bg);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+            border: 1px solid #e0e0e0;
+        }
+        .menu-button:active {
+            transform: scale(0.98);
+        }
+        .menu-button:hover {
+            box-shadow: 0 6px 20px rgba(26, 35, 126, 0.1);
+            border-color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <h1>Selecciona Inventario</h1>
+    <a href="menu_aserrada.html" class="menu-button">🪵 Madera Aserrada</a>
+    <a href="menu_terminado.html" class="menu-button">📦 Producto Terminado</a>
+</body>
+</html>
