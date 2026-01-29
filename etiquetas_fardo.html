@@ -105,6 +105,8 @@
                 text-align: center;
                 border: 1px solid #eee; /* Borde sutil opcional */
                 background: white;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
             
             /* Asegurar que el texto sea negro puro */
@@ -324,6 +326,8 @@
 
     async function conectarBluetooth() {
         try {
+            if (!navigator.bluetooth) throw new Error("Navegador no compatible");
+
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
                 optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
@@ -334,11 +338,20 @@
             alert("✅ Conectado a " + bluetoothDevice.name);
         } catch (error) {
             console.log(error);
-            alert("No se pudo conectar. Intenta de nuevo.");
+            if (error.message.includes("Navegador")) {
+                alert("❌ Tu navegador no soporta Bluetooth.\nUsa Chrome o Bluefy.");
+            } else {
+                alert("❌ No se pudo conectar.\nVerifica que la impresora esté encendida y cerca.");
+            }
         }
     }
 
     async function imprimirFardoIndividual(index) {
+        if (!navigator.bluetooth) {
+            alert("❌ Tu navegador no soporta Bluetooth Web.\n\n- En Android/PC: Usa Google Chrome.\n- En iPhone/iPad: Usa la App 'Bluefy'.");
+            return;
+        }
+
         if (!printCharacteristic) {
             await conectarBluetooth();
             if (!printCharacteristic) return;
@@ -370,12 +383,12 @@
 
         div.innerHTML = `
             <svg id="barcode-${index}"></svg>
-            <div style="font-weight:bold; font-size: 1.1rem; margin-top: 2px;">Lote: ${f.lote || '---'}</div>
-            <div style="font-weight:bold; font-size: 1rem; margin-bottom: 5px;">Fardo: ${f.fardoNo} - ${f.m2} ${unidad}</div>
+            <div style="font-weight:bold; font-size: 1rem; margin-top: 2px;">Lote: ${f.lote || '---'}</div>
+            <div style="font-weight:bold; font-size: 0.9rem; margin-bottom: 5px;">Fardo: ${f.fardoNo} - ${f.m2} ${unidad}</div>
             
             <div style="width:100%; border-bottom: 2px solid black; margin-bottom: 5px;"></div>
             
-            <div style="font-weight:bold; font-size: 1rem;">${f.producto || ''} ${f.grosor || ''} x ${f.ancho || ''}"</div>
+            <div style="font-weight:bold; font-size: 0.9rem;">${f.producto || ''} ${f.grosor || ''} x ${f.ancho || ''}"</div>
             <div style="font-size: 0.9rem;">Especie: ${f.especie || '---'}</div>
 
             <div style="width:100%; border-bottom: 2px solid black; margin: 5px 0;"></div>
@@ -413,12 +426,12 @@
             // Generar Código de Barras
             if (typeof JsBarcode !== 'undefined') {
                 JsBarcode("#barcode-0", String(f.fardoNo), {
-                    format: "CODE128", displayValue: false, height: 40, width: 2, margin: 0
+                    format: "CODE128", displayValue: false, height: 35, width: 2, margin: 2
                 });
             }
 
             // Imprimir con pequeño retardo para asegurar renderizado
-            setTimeout(() => window.print(), 200);
+            setTimeout(() => window.print(), 500);
         } catch (err) {
             alert("Ocurrió un error al intentar imprimir: " + err.message);
             console.error(err);
@@ -441,17 +454,22 @@
             if (typeof JsBarcode !== 'undefined') {
                 try {
                     JsBarcode("#barcode-" + i, String(f.fardoNo), {
-                        format: "CODE128", displayValue: false, height: 40, width: 2, margin: 0
+                        format: "CODE128", displayValue: false, height: 35, width: 2, margin: 2
                     });
                 } catch(e) {}
             }
         });
 
         // Imprimir
-        setTimeout(() => window.print(), 500);
+        setTimeout(() => window.print(), 800);
     }
 
     async function imprimirTodoElLote() {
+        if (!navigator.bluetooth) {
+            alert("❌ Tu navegador no soporta Bluetooth Web.\n\n- En Android/PC: Usa Google Chrome.\n- En iPhone/iPad: Usa la App 'Bluefy'.");
+            return;
+        }
+
         if (!printCharacteristic) {
             await conectarBluetooth();
             if (!printCharacteristic) return;
