@@ -352,11 +352,16 @@
             return;
         }
 
-        if (!printCharacteristic) {
-            await conectarBluetooth();
-            if (!printCharacteristic) return;
+        try {
+            if (!printCharacteristic) {
+                await conectarBluetooth();
+                if (!printCharacteristic) return;
+            }
+            await enviarComandoEtiqueta(fardosDelLote[index]);
+        } catch (error) {
+            alert("❌ Error al enviar a impresora:\n" + error.message);
+            printCharacteristic = null; // Reiniciar conexión por si acaso
         }
-        await enviarComandoEtiqueta(fardosDelLote[index]);
     }
 
     // Función auxiliar para generar el HTML de una etiqueta
@@ -470,19 +475,24 @@
             return;
         }
 
-        if (!printCharacteristic) {
-            await conectarBluetooth();
-            if (!printCharacteristic) return;
-        }
+        try {
+            if (!printCharacteristic) {
+                await conectarBluetooth();
+                if (!printCharacteristic) return;
+            }
 
-        if (!confirm(`¿Estás seguro de imprimir ${fardosDelLote.length} etiquetas? Asegúrate de tener papel.`)) return;
+            if (!confirm(`¿Estás seguro de imprimir ${fardosDelLote.length} etiquetas? Asegúrate de tener papel.`)) return;
 
-        for (const fardo of fardosDelLote) {
-            await enviarComandoEtiqueta(fardo);
-            // Pequeña pausa entre etiquetas para no saturar
-            await new Promise(r => setTimeout(r, 500));
+            for (const fardo of fardosDelLote) {
+                await enviarComandoEtiqueta(fardo);
+                // Pequeña pausa entre etiquetas para no saturar
+                await new Promise(r => setTimeout(r, 500));
+            }
+            alert("✅ Impresión masiva finalizada.");
+        } catch (error) {
+            alert("❌ Error en impresión masiva:\n" + error.message);
+            printCharacteristic = null;
         }
-        alert("✅ Impresión masiva finalizada.");
     }
 
     async function enviarComandoEtiqueta(f) {
