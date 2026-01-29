@@ -9,6 +9,8 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
 
     const encoder = new TextEncoder();
     let cmd = "";
+    const unidad = fardo.unidad || 'm2';
+    const unidadDisplay = unidad === 'ml' ? 'ML' : 'M2';
 
     // --- CONFIGURACIÓN DE LA ETIQUETA (4x3 pulgadas) ---
     cmd += "SIZE 4,3\r\n"; 
@@ -25,7 +27,7 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
     // TEXT x,y,"font",rotation,x-mul,y-mul,alignment,"content"
     // Alignment 2 = Centrado
     cmd += `TEXT 300,125,"3",0,1,1,2,"Lote: ${fardo.lote}"\r\n`;
-    cmd += `TEXT 350,45,"3",0,1,1,2,"Fardo: ${fardo.fardoNo}  -  ${fardo.m2} M2"\r\n`;
+    cmd += `TEXT 350,45,"3",0,1,1,2,"Fardo: ${fardo.fardoNo}  -  ${fardo.m2} ${unidadDisplay}"\r\n`;
 
     cmd += `BAR 40,155,720,2\r\n`; // Línea separadora
 
@@ -39,19 +41,20 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
     // Encabezados de columnas
     cmd += `TEXT 60,260,"3",0,1,1,"LARGO"\r\n`;
     cmd += `TEXT 314,260,"3",0,1,1,"PIEZAS"\r\n`;
-    cmd += `TEXT 650,260,"3",0,1,1,"M2"\r\n`;
+    cmd += `TEXT 650,260,"3",0,1,1,"${unidadDisplay}"\r\n`;
 
     // Filas de la tabla
     let y = 290;
     if (fardo.detalles && fardo.detalles.length > 0) {
         fardo.detalles.forEach(d => {
             if (y < 500) { // Evitar que se salga de la etiqueta
-                // Cálculo de M2 por línea si no viene pre-calculado
-                const m2_linea = d.piezas * (d.largo * 0.3048) * (fardo.ancho * 0.0254);
+                const metros_linea = (unidad === 'ml')
+                    ? d.piezas * (d.largo * 0.3048) // Metros lineales
+                    : d.piezas * (d.largo * 0.3048) * (fardo.ancho * 0.0254); // Metros cuadrados
                 
                 cmd += `TEXT 60,${y},"3",0,1,1,"${d.largo}"\r\n`;
                 cmd += `TEXT 350,${y},"3",0,1,1,"${d.piezas}"\r\n`;
-                cmd += `TEXT 650,${y},"3",0,1,1,"${m2_linea.toFixed(2)}"\r\n`;
+                cmd += `TEXT 650,${y},"3",0,1,1,"${metros_linea.toFixed(2)}"\r\n`;
                 y += 35;
             }
         });
@@ -64,7 +67,7 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
     
     const totalPzs = fardo.detalles ? fardo.detalles.reduce((acc, d) => acc + d.piezas, 0) : 0;
     cmd += `TEXT 158,540,"3",0,1,1,"TOTAL PIEZAS: ${totalPzs > 0 ? totalPzs : '-'}"\r\n`;
-    cmd += `TEXT 532,540,"3",0,1,1,3,"TOTAL: ${fardo.m2} M2"\r\n`; // Align 3 = Derecha
+    cmd += `TEXT 532,540,"3",0,1,1,3,"TOTAL: ${fardo.m2} ${unidadDisplay}"\r\n`; // Align 3 = Derecha
 
     cmd += "PRINT 1,1\r\n";
 

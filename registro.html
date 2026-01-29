@@ -213,9 +213,10 @@
             </div>
             <div>
                 <label>Producto</label>
-                <select id="producto" class="compact-input">
+                <select id="producto" class="compact-input" onchange="handleProductChange()">
                     <option value="Piso Barnizado">Barnizado</option>
                     <option value="Piso Crudo">Crudo</option>
+                    <option value="Tranquilla">Tranquilla</option>
                 </select>
             </div>
             <div>
@@ -306,6 +307,12 @@
     let printCharacteristic;
     let selectedPiezas = 1; // Valor por defecto para botones rápidos
 
+    function handleProductChange() {
+        // El ancho ahora es necesario para todos los productos
+        const anchoInput = document.getElementById('ancho');
+        if(anchoInput.value === "0") anchoInput.value = "5"; 
+    }
+
     // Cargar datos guardados al iniciar la página
     window.onload = function() {
         const guardado = localStorage.getItem('inventario_fardos');
@@ -326,6 +333,7 @@
         });
 
         renderQuickButtons();
+        handleProductChange();
         
         // Cargar base de datos remota y configurar listener de Lote
         cargarInventarioRemoto();
@@ -465,27 +473,41 @@
             }
 
             if (currentDetalles.length === 0) {
-                alert("Debes agregar al menos una línea de detalle (Piezas/Largo/Ancho)");
+                alert("Debes agregar al menos una línea de detalle (Piezas/Largo)");
                 return;
             }
 
+            const producto = document.getElementById('producto').value;
             const anchoGlobal = parseFloat(document.getElementById('ancho').value) || 0;
 
-            // Calcular M2 Total
-            let totalM2 = 0;
-            currentDetalles.forEach(d => {
-                totalM2 += d.piezas * (d.largo * 0.3048) * (anchoGlobal * 0.0254);
-            });
+            // Calcular M2 o ML Total
+            let totalMetros = 0;
+            let unidad = 'm2';
+
+            if (producto === 'Tranquilla') {
+                unidad = 'ml';
+                currentDetalles.forEach(d => {
+                    // Metros lineales: Piezas * (Largo en ft a m)
+                    totalMetros += d.piezas * (d.largo * 0.3048);
+                });
+            } else {
+                unidad = 'm2';
+                currentDetalles.forEach(d => {
+                    // Metros cuadrados: Piezas * (Largo en m) * (Ancho en m)
+                    totalMetros += d.piezas * (d.largo * 0.3048) * (anchoGlobal * 0.0254);
+                });
+            }
 
             const fardo = {
                 lote: document.getElementById('loteId').value,
                 fardoNo: document.getElementById('fardoNo').value,
-                producto: document.getElementById('producto').value,
+                producto: producto,
                 grosor: document.getElementById('grosor').value,
                 ancho: anchoGlobal,
                 especie: document.getElementById('especie').value,
                 detalles: [...currentDetalles], // Copia del array
-                m2: totalM2.toFixed(2)
+                m2: totalMetros.toFixed(2), // Keep name m2 for compatibility, but value can be m2 or ml
+                unidad: unidad
             };
 
             if(!fardo.lote || !fardo.fardoNo) {
@@ -563,26 +585,34 @@
         const remotos = inventarioRemoto.filter(f => String(f['# Lote']) === String(loteActual));
 
         // Calcular totales combinados
-        let totalM2 = 0;
+        let totalMetros = 0;
         let count = 0;
+        let unidadLote = 'm²';
 
-        locales.forEach(f => { totalM2 += parseFloat(f.m2) || 0; count++; });
-        remotos.forEach(f => { totalM2 += parseFloat(f['M2']) || 0; count++; });
+        if (locales.length > 0) {
+            unidadLote = locales[0].unidad === 'ml' ? 'ml' : 'm²';
+        } else if (remotos.length > 0) {
+            unidadLote = (remotos[0]['Unidad'] || 'm2') === 'ml' ? 'ml' : 'm²';
+        }
+
+        locales.forEach(f => { totalMetros += parseFloat(f.m2) || 0; count++; });
+        remotos.forEach(f => { totalMetros += parseFloat(f['M2']) || 0; count++; });
         
         if (loteActual) {
-            displayLote.innerHTML = `${loteActual} <br><small>(${count} Fardos - ${totalM2.toFixed(2)} m²)</small>`;
+            displayLote.innerHTML = `${loteActual} <br><small>(${count} Fardos - ${totalMetros.toFixed(2)} ${unidadLote})</small>`;
         } else {
             displayLote.innerText = "---";
         }
         
         // 1. Mostrar Fardos Remotos (Base de Datos) - Solo lectura
         remotos.forEach(f => {
+            const unidadRemota = (f['Unidad'] || 'm2') === 'ml' ? 'ml' : 'm²';
             const item = document.createElement('div');
             item.className = 'row-item';
             item.style.backgroundColor = '#f8f9fa'; 
             item.style.borderLeft = '4px solid #95a5a6';
             item.innerHTML = `
-                <span>☁️ Fardo: ${f['# Fardo']} (${f['M2']} m²)</span>
+                <span>☁️ Fardo: ${f['# Fardo']} (${f['M2']} ${unidadRemota})</span>
                 <span style="font-size:0.8rem; color:#666;">${f['Calidad'] || ''}</span>
             `;
             lista.appendChild(item);
@@ -594,11 +624,12 @@
             if (String(f.lote) !== String(loteActual)) return;
 
             const totalPiezas = f.detalles.reduce((acc, d) => acc + d.piezas, 0);
+            const unidadLocal = f.unidad || 'm2';
             
             const item = document.createElement('div');
             item.className = 'row-item';
             item.innerHTML = `
-                <span>Fardo: ${f.fardoNo} (${totalPiezas} pzs - ${f.m2} m2)</span> 
+                <span>Fardo: ${f.fardoNo} (${totalPiezas} pzs - ${f.m2} ${unidadLocal})</span> 
                 <div style="display:flex; gap:5px;">
                     <button onclick="imprimir(${index})" class="btn-small" style="width:auto; background:#2c3e50;">Print</button>
                     <button onclick="guardarImagen(${index})" class="btn-small" style="background:#3498db; width:auto;">Img</button>
@@ -634,6 +665,9 @@
         // Cargar detalles
         currentDetalles = [...f.detalles];
         renderDetalles();
+
+        // Actualizar UI para el producto
+        handleProductChange();
         
         // Eliminar de la lista (para que al guardar no se duplique)
         fardosData.splice(index, 1);
@@ -658,8 +692,10 @@
             } catch(e) { console.error(e); }
         }
         
+        const unidad = f.unidad === 'ml' ? 'ML' : 'M2';
         document.getElementById('printLote').innerText = "Lote: " + f.lote;
-        document.getElementById('printFardoM2').innerText = `Fardo: ${f.fardoNo} - ${f.m2} M2`;
+        document.getElementById('printFardoM2').innerText = `Fardo: ${f.fardoNo} - ${f.m2} ${unidad}`;
+        
         document.getElementById('printProducto').innerText = `${f.producto} ${f.grosor} x ${f.ancho}"`;
         document.getElementById('printEspecie').innerText = "Especie: " + f.especie;
         
@@ -744,7 +780,8 @@
                     Piezas: d.piezas,
                     Largo_Ft: d.largo,
                     Ancho_In: f.ancho,
-                    M2_Total_Fardo: f.m2
+                    Metros: f.m2,
+                    Unidad: f.unidad
                 });
             });
         });
