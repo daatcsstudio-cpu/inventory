@@ -82,24 +82,35 @@
 
         #results-area { display: none; }
 
-        /* Estilos para impresión PC (Etiqueta 4x3) */
-        #label-template {
-            display: none;
-            background: white;
-            width: 4in;
-            height: 3in;
-            padding: 5px 10px;
-            flex-direction: column;
-            overflow: hidden;
-            align-items: center;
-            text-align: center;
-            box-sizing: border-box;
-        }
+        /* Área de impresión oculta en pantalla normal */
+        #print-area { display: none; }
+
         @media print {
+            /* Ocultar todo el contenido de la app */
+            .container, .no-print { display: none !important; }
+            
+            /* Mostrar solo el área de impresión */
+            #print-area { display: block !important; position: absolute; top: 0; left: 0; width: 100%; }
+            
+            /* Estilo de cada etiqueta individual */
+            .print-label {
+                width: 4in; height: 3in;
+                page-break-after: always; /* Forzar salto de página después de cada etiqueta */
+                overflow: hidden;
+                box-sizing: border-box;
+                padding: 5px 10px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                border: 1px solid #eee; /* Borde sutil opcional */
+                background: white;
+            }
+            
+            /* Asegurar que el texto sea negro puro */
+            .print-label * { color: black !important; visibility: visible !important; }
+            
             @page { size: 4in 3in; margin: 0mm; }
-            body * { visibility: hidden; }
-            #label-template, #label-template * { visibility: visible; }
-            #label-template { position: fixed; left: 0; top: 0; display: flex; border: none; }
         }
         .print-col-header { border-bottom: 1px solid #000; margin-bottom: 2px; font-size: 0.9rem; font-weight: bold; }
         .print-val { font-size: 1rem; }
@@ -124,6 +135,7 @@
             <p style="text-align:center; margin-bottom:15px;">Se encontraron <b id="count-fardos">0</b> fardos en este lote.</p>
             
             <button class="btn-print-all" onclick="imprimirTodoElLote()">🖨️ IMPRIMIR TODO EL LOTE</button>
+            <button class="btn-print-all" style="background-color: #2c3e50; margin-top: 5px;" onclick="imprimirTodoElLotePC()">🖨️ IMPRIMIR TODO (PC/USB)</button>
             <div style="text-align:center; font-size:0.8rem; color:#666;">(Imprime todas las etiquetas una tras otra)</div>
         </div>
 
@@ -136,31 +148,8 @@
     <!-- <a href="menu_terminado.html" class="btn-back">⬅ Volver al Menú</a> -->
 </div>
 
-<!-- Plantilla Oculta para Impresión PC -->
-<div id="label-template">
-    <svg id="barcode"></svg>
-    <div id="printLote" style="font-weight:bold; font-size: 1.1rem; margin-top: 2px;">Lote: ---</div>
-    <div id="printFardoM2" style="font-weight:bold; font-size: 1rem; margin-bottom: 5px;">Fardo: --- - --- M2</div>
-    
-    <div style="width:100%; border-bottom: 2px solid black; margin-bottom: 5px;"></div>
-    
-    <div id="printProducto" style="font-weight:bold; font-size: 1rem;">Producto ---</div>
-    <div id="printEspecie" style="font-size: 0.9rem;">Especie: ---</div>
-
-    <div style="width:100%; border-bottom: 2px solid black; margin: 5px 0;"></div>
-
-    <div style="display: flex; justify-content: space-between; flex-grow: 1; width: 100%;">
-        <div style="width:48%;">
-            <div class="print-col-header">Piezas</div>
-            <div id="printPiezasCol"></div>
-        </div>
-        <div style="width:48%;">
-            <div class="print-col-header">Largo</div>
-            <div id="printLargosCol"></div>
-        </div>
-    </div>
-    <div style="width:100%; border-top: 2px solid black; margin-top: auto; padding-top: 5px; display:flex; justify-content:space-between; font-weight:bold;"><span id="printTotalPzs">Pzs: 0</span><span id="printTotalM2">Total: 0.00</span></div>
-</div>
+<!-- Contenedor para inyectar etiquetas al imprimir -->
+<div id="print-area"></div>
 
 <script>
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJm67IZXi_zHsxQv3mqosqb6-RyKp4-j-h-kqdP153HTN8t6lt7BPE5BrwSzphArkx/exec";
@@ -357,51 +346,76 @@
         await enviarComandoEtiqueta(fardosDelLote[index]);
     }
 
+    // Función auxiliar para generar el HTML de una etiqueta
+    function crearEtiquetaHTML(f, index) {
+        const div = document.createElement('div');
+        div.className = 'print-label';
+        
+        let totalPzs = 0;
+        let piezasHTML = '';
+        let largosHTML = '';
+        
+        if (f.detalles && f.detalles.length > 0) {
+            f.detalles.forEach(d => {
+                piezasHTML += `<div class="print-val">${d.piezas}</div>`;
+                largosHTML += `<div class="print-val">${d.largo}</div>`;
+                totalPzs += parseInt(d.piezas) || 0;
+            });
+        } else {
+            piezasHTML = "<div>-</div>";
+            largosHTML = "<div>-</div>";
+        }
+
+        const unidad = (f.producto && f.producto.toLowerCase().includes('tranquilla')) ? 'ML' : 'M2';
+
+        div.innerHTML = `
+            <svg id="barcode-${index}"></svg>
+            <div style="font-weight:bold; font-size: 1.1rem; margin-top: 2px;">Lote: ${f.lote || '---'}</div>
+            <div style="font-weight:bold; font-size: 1rem; margin-bottom: 5px;">Fardo: ${f.fardoNo} - ${f.m2} ${unidad}</div>
+            
+            <div style="width:100%; border-bottom: 2px solid black; margin-bottom: 5px;"></div>
+            
+            <div style="font-weight:bold; font-size: 1rem;">${f.producto || ''} ${f.grosor || ''} x ${f.ancho || ''}"</div>
+            <div style="font-size: 0.9rem;">Especie: ${f.especie || '---'}</div>
+
+            <div style="width:100%; border-bottom: 2px solid black; margin: 5px 0;"></div>
+
+            <div style="display: flex; justify-content: space-between; flex-grow: 1; width: 100%;">
+                <div style="width:48%;">
+                    <div class="print-col-header">Piezas</div>
+                    <div>${piezasHTML}</div>
+                </div>
+                <div style="width:48%;">
+                    <div class="print-col-header">Largo</div>
+                    <div>${largosHTML}</div>
+                </div>
+            </div>
+            <div style="width:100%; border-top: 2px solid black; margin-top: auto; padding-top: 5px; display:flex; justify-content:space-between; font-weight:bold;">
+                <span>Pzs: ${totalPzs}</span>
+                <span>Total: ${f.m2} ${unidad}</span>
+            </div>
+        `;
+        return div;
+    }
+
     function imprimirFardoIndividualPC(index) {
         try {
             const f = fardosDelLote[index];
             if (!f) { alert("Error: No se encontraron datos del fardo."); return; }
             
-            // Generar Código de Barras (con manejo de error si no carga la librería)
-            if (typeof JsBarcode !== 'undefined') {
-                try {
-                    JsBarcode("#barcode", String(f.fardoNo), {
-                        format: "CODE128", displayValue: false, height: 40, width: 2, margin: 0
-                    });
-                } catch (e) { console.error("Error barcode:", e); }
-            } else {
-                console.warn("Librería JsBarcode no cargada (¿Sin internet?)");
-            }
+            // Limpiar área de impresión y agregar solo esta etiqueta
+            const printArea = document.getElementById('print-area');
+            printArea.innerHTML = '';
             
-            // Helper para asignar texto seguro
-            const setTxt = (id, txt) => { const el = document.getElementById(id); if(el) el.innerText = txt; };
+            const label = crearEtiquetaHTML(f, 0);
+            printArea.appendChild(label);
 
-            // Llenar datos
-            setTxt('printLote', "Lote: " + (f.lote || '---'));
-            const unidad = (f.producto && f.producto.toLowerCase().includes('tranquilla')) ? 'ML' : 'M2';
-            setTxt('printFardoM2', `Fardo: ${f.fardoNo} - ${f.m2} ${unidad}`);
-            setTxt('printProducto', `${f.producto || ''} ${f.grosor || ''} x ${f.ancho || ''}"`);
-            setTxt('printEspecie', "Especie: " + (f.especie || '---'));
-            
-            const colPiezas = document.getElementById('printPiezasCol');
-            const colLargos = document.getElementById('printLargosCol');
-            if(colPiezas) colPiezas.innerHTML = "";
-            if(colLargos) colLargos.innerHTML = "";
-            
-            let totalPzs = 0;
-            if (f.detalles && f.detalles.length > 0) {
-                f.detalles.forEach(d => {
-                    if(colPiezas) colPiezas.innerHTML += `<div class="print-val">${d.piezas}</div>`;
-                    if(colLargos) colLargos.innerHTML += `<div class="print-val">${d.largo}</div>`;
-                    totalPzs += parseInt(d.piezas) || 0;
+            // Generar Código de Barras
+            if (typeof JsBarcode !== 'undefined') {
+                JsBarcode("#barcode-0", String(f.fardoNo), {
+                    format: "CODE128", displayValue: false, height: 40, width: 2, margin: 0
                 });
-            } else {
-                if(colPiezas) colPiezas.innerHTML = "<div>-</div>";
-                if(colLargos) colLargos.innerHTML = "<div>-</div>";
             }
-            
-            setTxt('printTotalPzs', `Pzs: ${totalPzs}`);
-            setTxt('printTotalM2', `Total: ${f.m2} ${unidad}`);
 
             // Imprimir con pequeño retardo para asegurar renderizado
             setTimeout(() => window.print(), 200);
@@ -409,6 +423,32 @@
             alert("Ocurrió un error al intentar imprimir: " + err.message);
             console.error(err);
         }
+    }
+
+    function imprimirTodoElLotePC() {
+        if (fardosDelLote.length === 0) return;
+        if (!confirm(`¿Estás seguro de imprimir ${fardosDelLote.length} etiquetas en la impresora de PC?`)) return;
+
+        const printArea = document.getElementById('print-area');
+        printArea.innerHTML = '';
+
+        // Generar todas las etiquetas
+        fardosDelLote.forEach((f, i) => {
+            const label = crearEtiquetaHTML(f, i);
+            printArea.appendChild(label);
+            
+            // Generar código de barras para cada una
+            if (typeof JsBarcode !== 'undefined') {
+                try {
+                    JsBarcode("#barcode-" + i, String(f.fardoNo), {
+                        format: "CODE128", displayValue: false, height: 40, width: 2, margin: 0
+                    });
+                } catch(e) {}
+            }
+        });
+
+        // Imprimir
+        setTimeout(() => window.print(), 500);
     }
 
     async function imprimirTodoElLote() {
