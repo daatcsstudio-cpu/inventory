@@ -2,63 +2,241 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Selección de Inventario</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Administrativo Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Iconos Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root {
-            --primary: #1A237E;
-            --bg: #F5F7F9;
-            --card-bg: #FFFFFF;
-            --text-dark: #2c3e50;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            box-sizing: border-box;
-            color: var(--text-dark);
-        }
-        h1 {
-            color: var(--primary);
-            margin-bottom: 40px;
-        }
-        .menu-button {
-            display: block;
-            width: 80%;
-            max-width: 300px;
-            padding: 25px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 1.2rem;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
-            color: var(--primary);
-            background-color: var(--card-bg);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
-            border: 1px solid #e0e0e0;
-        }
-        .menu-button:active {
-            transform: scale(0.98);
-        }
-        .menu-button:hover {
-            box-shadow: 0 6px 20px rgba(26, 35, 126, 0.1);
-            border-color: var(--primary);
-        }
+        /* Ocultar scrollbar en la sidebar pero permitir scroll */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Animación suave para entrada de contenido */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body>
-    <h1>Selecciona Inventario</h1>
-    <a href="menu_aserrada.html" class="menu-button">🪵 Madera Aserrada</a>
-    <a href="menu_terminado.html" class="menu-button">📦 Producto Terminado</a>
+<body class="bg-gray-50 text-slate-800 font-sans antialiased overflow-hidden">
+
+    <div class="flex h-screen">
+        
+        <!-- Backdrop para Móvil (Fondo oscuro al abrir menú) -->
+        <div id="sidebar-backdrop" class="fixed inset-0 z-20 bg-black/50 transition-opacity opacity-0 pointer-events-none lg:hidden" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar Fija -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 text-white transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 flex flex-col shadow-2xl">
+            <!-- Logo / Header -->
+            <div class="flex items-center justify-center h-16 bg-slate-950 shadow-md border-b border-slate-800">
+                <span class="text-xl font-bold tracking-wider uppercase flex items-center gap-2 text-white">
+                    <i data-lucide="box" class="w-6 h-6 text-blue-500"></i> Inventario
+                </span>
+            </div>
+
+            <!-- Navegación -->
+            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
+                <a href="#" onclick="loadView('home', this)" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-lg shadow-blue-900/20">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <span class="font-medium">Inicio</span>
+                </a>
+                
+                <div class="pt-6 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wider px-2">Producto Terminado</div>
+
+                <a href="#" onclick="loadView('registro.html', this)" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
+                    <i data-lucide="clipboard-pen-line" class="w-5 h-5"></i>
+                    <span>Registro</span>
+                </a>
+
+                <a href="#" onclick="loadView('etiqueta_lote.html', this)" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
+                    <i data-lucide="tag" class="w-5 h-5"></i>
+                    <span>Etiqueta Lote</span>
+                </a>
+
+                <a href="#" onclick="loadView('etiquetas_fardo.html', this)" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
+                    <i data-lucide="qr-code" class="w-5 h-5"></i>
+                    <span>Etiquetas Fardos</span>
+                </a>
+
+                <a href="#" onclick="loadView('checklist.html', this)" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
+                    <i data-lucide="check-square" class="w-5 h-5"></i>
+                    <span>Checklist</span>
+                </a>
+
+                <div class="pt-6 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wider px-2">Madera Aserrada</div>
+
+                <a href="#" onclick="loadView('ingreso_tally.html', this)" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
+                    <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                    <span>Ingreso Tally</span>
+                </a>
+
+                <a href="#" onclick="loadView('base_datos_aserrada.html', this)" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
+                    <i data-lucide="database" class="w-5 h-5"></i>
+                    <span>Base de Datos</span>
+                </a>
+
+                <a href="#" onclick="loadView('etiquetas_aserrada.html', this)" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
+                    <i data-lucide="tags" class="w-5 h-5"></i>
+                    <span>Etiquetas</span>
+                </a>
+
+                <a href="#" onclick="loadView('buscar_rebajar.html', this)" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
+                    <i data-lucide="search-x" class="w-5 h-5"></i>
+                    <span>Buscar / Rebajar</span>
+                </a>
+
+                <div class="pt-6 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wider px-2">Geolocalizar</div>
+
+                <a href="#" onclick="loadView('mapa_ubicaciones.html', this)" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
+                    <i data-lucide="map" class="w-5 h-5"></i>
+                    <span>Mapa Ubicaciones</span>
+                </a>
+            </nav>
+
+            <!-- Footer Sidebar -->
+            <div class="p-4 bg-slate-950 border-t border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
+                        AD
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-white">Administrador</p>
+                        <p class="text-xs text-slate-400">Sistema Pro</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Contenedor Principal -->
+        <div class="flex-1 flex flex-col min-w-0 h-screen">
+            
+            <!-- Header Móvil -->
+            <header class="bg-white shadow-sm lg:hidden flex items-center justify-between px-4 h-16 z-10 flex-shrink-0">
+                <button onclick="toggleSidebar()" class="text-slate-600 focus:outline-none p-2 hover:bg-gray-100 rounded-md">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <span id="mobile-title" class="font-bold text-slate-800 text-lg">Inicio</span>
+                <div class="w-10"></div> <!-- Espaciador para centrar título visualmente -->
+            </header>
+
+            <!-- Área de Contenido -->
+            <main class="flex-1 overflow-hidden bg-gray-50 relative">
+                
+                <!-- VISTA INICIO (Dashboard Stats) -->
+                <div id="view-home" class="h-full overflow-y-auto p-4 lg:p-8 fade-in">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+                        <div>
+                            <h1 class="text-2xl font-bold text-slate-800">Resumen General</h1>
+                            <p class="text-slate-500 text-sm">Bienvenido al panel de control de inventario.</p>
+                        </div>
+                        <button class="px-4 py-2 bg-white border border-gray-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
+                            <i data-lucide="download" class="w-4 h-4"></i> Exportar Datos
+                        </button>
+                    </div>
+
+                    <!-- Tarjetas de Estadísticas -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <!-- Card 1 -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                    <i data-lucide="package" class="w-6 h-6"></i>
+                                </div>
+                                <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">+12%</span>
+                            </div>
+                            <h3 class="text-slate-500 text-sm font-medium">Total Fardos</h3>
+                            <p class="text-2xl font-bold text-slate-800 mt-1">1,248</p>
+                        </div>
+
+                        <!-- Card 2 -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-amber-50 text-amber-600 rounded-lg group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                                </div>
+                                <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-full">Atención</span>
+                            </div>
+                            <h3 class="text-slate-500 text-sm font-medium">Alertas Stock</h3>
+                            <p class="text-2xl font-bold text-slate-800 mt-1">5</p>
+                        </div>
+
+                        <!-- Card 3 -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-purple-50 text-purple-600 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                                    <i data-lucide="layers" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                            <h3 class="text-slate-500 text-sm font-medium">Último Lote</h3>
+                            <p class="text-2xl font-bold text-slate-800 mt-1">L-2024-08</p>
+                        </div>
+
+                        <!-- Card 4 -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                    <i data-lucide="ruler" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                            <h3 class="text-slate-500 text-sm font-medium">M2 Procesados</h3>
+                            <p class="text-2xl font-bold text-slate-800 mt-1">45,230</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTENEDOR IFRAME (Para cargar módulos externos) -->
+                <div id="view-frame-container" class="hidden w-full h-full">
+                    <iframe id="content-frame" class="w-full h-full border-none" src=""></iframe>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons(); // Inicializar iconos
+
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        const homeView = document.getElementById('view-home');
+        const frameContainer = document.getElementById('view-frame-container');
+        const frame = document.getElementById('content-frame');
+        const mobileTitle = document.getElementById('mobile-title');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            backdrop.classList.toggle('opacity-0');
+            backdrop.classList.toggle('pointer-events-none');
+        }
+
+        function loadView(url, element) {
+            // Actualizar estilos de navegación
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-900/20');
+                el.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+            });
+            element.classList.remove('text-slate-400', 'hover:bg-slate-800');
+            element.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-900/20');
+
+            // Actualizar el título en el header móvil
+            if(mobileTitle) mobileTitle.innerText = element.querySelector('span').innerText;
+
+            // Cerrar sidebar en móvil
+            if (window.innerWidth < 1024) {
+                toggleSidebar();
+            }
+
+            // Lógica de carga
+            if (url === 'home') {
+                homeView.classList.remove('hidden');
+                frameContainer.classList.add('hidden');
+                frame.src = ''; // Limpiar iframe para ahorrar memoria
+            } else {
+                homeView.classList.add('hidden');
+                frameContainer.classList.remove('hidden');
+                frame.src = url; // Cargar archivo HTML externo
+            }
+        }
+    </script>
 </body>
 </html>
