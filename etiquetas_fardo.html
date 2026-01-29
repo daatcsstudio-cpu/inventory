@@ -171,8 +171,14 @@
                     producto: getVal(['Producto', 'Calidad', 'producto']) || '',
                     especie: getVal(['Especie', 'especie']) || '',
                     grosor: formatearGrosor(getVal(['Grosor "', 'Grosor', 'grosor'])),
+                    condicion: getVal(['CONDICION', 'Condicion', 'condicion']) || '',
+                    calidad: getVal(['CALIDAD', 'Calidad', 'calidad']) || '',
+                    poa: getVal(['POA', 'poa']) || '',
+                    fecha: getVal(['Fecha de ingreso', 'Fecha', 'fecha']) || '',
+                    idCode: getVal(['ID CODE', 'ID Code', 'id code']) || '',
                     ancho: parseFloat(getVal(['Ancho "', 'Ancho', 'ancho'])) || 0,
                     m2: 0,
+                    pt: 0,
                     detalles: []
                 };
             }
@@ -203,6 +209,10 @@
             // Leer M2 (si no hay detalles, usaremos este valor; si hay, lo recalcularemos)
             const m2Row = parseFloat(getVal(['M2', 'm2', 'M2_Total_Fardo'])) || 0;
             if (m2Row > agrupado[key].m2) agrupado[key].m2 = m2Row;
+
+            // Leer PT (sumar si hay múltiples filas para el mismo fardo)
+            const ptRow = parseFloat(getVal(['PIES TABLARES', 'Pies Tablares', 'PT', 'pt'])) || 0;
+            agrupado[key].pt = (agrupado[key].pt || 0) + ptRow;
         });
 
         // Convertir a array y redondear M2
@@ -216,6 +226,7 @@
                 f.m2 = parseFloat(m2Calc.toFixed(2));
             }
             f.m2 = parseFloat(f.m2.toFixed(2));
+            f.pt = parseFloat((f.pt || 0).toFixed(2));
             return f;
         });
     }
@@ -255,13 +266,17 @@
         fardosDelLote.forEach((f, index) => {
             const div = document.createElement('div');
             div.className = 'fardo-item';
+            const totalPiezas = f.detalles.reduce((acc, d) => acc + d.piezas, 0);
             div.innerHTML = `
                 <div>
                     <div class="fardo-title">Fardo #${f.fardoNo}</div>
                     <div class="fardo-info">${f.producto} - ${f.especie}</div>
-                    <div class="fardo-info">${f.m2} m² ${f.detalles.length > 0 ? '✅' : '⚠️ Sin detalles'}</div>
+                    <div class="fardo-info">${f.m2} m² / ${f.pt} PT (${totalPiezas} pzs)</div>
                 </div>
-                <button class="btn-print-single" onclick="imprimirFardoIndividual(${index})">🖨️ Imprimir</button>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                    <button class="btn-print-single" style="background-color:#e67e22;" onclick="imprimirFardoIndividual(${index})">📡 BT</button>
+                    <button class="btn-print-single" style="background-color:#2c3e50;" onclick="imprimirFardoIndividualPC(${index})">🖨️ PC</button>
+                </div>
             `;
             container.appendChild(div);
         });
