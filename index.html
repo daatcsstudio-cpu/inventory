@@ -24,6 +24,22 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* Estilos para Reporte Detallado (Estilo Hoja de Cálculo Profesional) */
+        .report-header { background-color: #6B8E23; color: white; border: 1px solid #556B2F; } /* Verde Oliva */
+        .report-sub-header { background-color: #556B2F; color: white; border: 1px solid #3e4f22; }
+        .report-cell { background-color: #FEFEE9; border: 1px solid #E6E6CA; color: #333; } /* Beige claro */
+        .report-row:hover td { background-color: #F0E68C !important; transition: background-color 0.2s; }
+        .report-total-row { background-color: #BDB76B; font-weight: bold; color: #2c3e50; }
+        
+        @media print {
+            @page { size: landscape; margin: 10mm; }
+            body * { visibility: hidden; }
+            #report-modal, #report-modal * { visibility: visible; }
+            #report-modal { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; z-index: 9999; }
+            #report-actions { display: none; }
+            .no-print { display: none; }
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-slate-800 font-sans antialiased overflow-hidden">
@@ -183,7 +199,7 @@
                         </div>
 
                         <!-- Card 4: Madera Aserrada -->
-                        <div onclick="mostrarDetalleAserrada()" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
+                        <div onclick="openModal('Madera Aserrada')" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="p-3 bg-green-50 text-green-600 rounded-lg group-hover:bg-green-600 group-hover:text-white transition-colors">
                                     <i data-lucide="database" class="w-6 h-6"></i>
@@ -203,14 +219,6 @@
                                 <tbody id="pte-table-body"></tbody>
                                 <tfoot id="pte-table-foot" class="font-bold text-slate-800 bg-gray-50"></tfoot>
                             </table>
-                        </div>
-                    </div>
-
-                    <!-- Detalle Madera Aserrada -->
-                    <div id="aserrada-detail-container" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100" style="display: none;">
-                        <h2 class="text-xl font-bold text-slate-800 mb-4">Detalle: Inventario de Madera Aserrada (Pies Tablares)</h2>
-                        <div id="detalle-aserrada" class="space-y-4 max-h-96 overflow-y-auto">
-                            <p class="text-slate-500">Cargando detalles...</p>
                         </div>
                     </div>
                 </div>
@@ -252,8 +260,14 @@
 
             <!-- Body (Scrollable Table) -->
             <div class="p-6 overflow-auto custom-scrollbar bg-gray-50/50">
+                <!-- Contenedor para Selección de Especies (Madera Aserrada) -->
+                <div id="species-grid-container" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Botones de especies generados dinámicamente -->
+                </div>
+
+                <!-- Contenedor para Tabla Estándar (Piso) -->
                 <div class="overflow-hidden border border-gray-200 rounded-xl shadow-sm bg-white">
-                    <table class="min-w-full text-sm text-left">
+                    <table id="generic-modal-table" class="min-w-full text-sm text-left">
                         <thead class="bg-gray-50 text-gray-600 font-bold uppercase tracking-wider border-b border-gray-200 text-xs">
                             <!-- Encabezados dinámicos -->
                         </thead>
@@ -270,7 +284,54 @@
             <!-- Footer -->
             <div class="bg-white p-4 rounded-b-2xl border-t border-gray-100 flex justify-end gap-3">
                 <button onclick="closeModal()" class="px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-800 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-200">Cerrar</button>
-                <button onclick="window.print()" class="px-5 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium transition-colors shadow-sm flex items-center gap-2"><i data-lucide="printer" class="w-4 h-4"></i> Imprimir</button>
+                <button onclick="exportGenericModalToExcel()" class="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors shadow-sm flex items-center gap-2"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Excel</button>
+                <button onclick="window.print()" class="px-5 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium transition-colors shadow-sm flex items-center gap-2"><i data-lucide="printer" class="w-4 h-4"></i> Imprimir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FULL SCREEN REPORTE DETALLADO (ESPECIES) -->
+    <div id="report-modal" class="fixed inset-0 z-50 hidden bg-white overflow-auto fade-in">
+        <div class="p-8 min-h-screen flex flex-col">
+            <!-- Header Modal -->
+            <div class="flex justify-between items-start mb-8 border-b-4 border-emerald-700 pb-4">
+                <div>
+                    <h1 id="report-title" class="text-3xl font-black text-emerald-900 tracking-tight uppercase">INVENTARIO TOTAL DE MADERA</h1>
+                    <h2 class="text-xl font-bold text-emerald-700 mt-1">CLASIFICADA POR GROSOR, LARGO Y CALIDAD</h2>
+                    <p class="text-slate-500 font-medium mt-2 capitalize" id="report-date">Fecha: ---</p>
+                </div>
+                <div class="flex flex-col items-end gap-4">
+                    <div class="text-right">
+                        <h3 class="text-2xl font-bold text-slate-800">GIBOR, S.A.</h3>
+                        <p class="text-xs text-slate-400">Reporte Oficial</p>
+                    </div>
+                    <div id="report-actions" class="flex gap-2 no-print">
+                        <button onclick="exportReportToExcel()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2 shadow-sm">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Descargar Excel
+                        </button>
+                        <button onclick="window.print()" class="px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700 flex items-center gap-2">
+                            <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Reporte
+                        </button>
+                        <button onclick="closeReportModal()" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center gap-2">
+                            <i data-lucide="x" class="w-4 h-4"></i> Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla Container -->
+            <div class="flex-1 overflow-x-auto shadow-2xl rounded-lg border border-emerald-100">
+                <table id="report-table" class="w-full text-sm text-right border-collapse">
+                    <thead class="text-xs uppercase sticky top-0 z-10 shadow-md">
+                        <!-- Headers generados por JS -->
+                        <tr id="report-header-row-1"></tr>
+                        <tr id="report-header-row-2"></tr>
+                    </thead>
+                    <tbody id="report-body" class="text-slate-700 font-mono">
+                        <!-- Data -->
+                    </tbody>
+                    <tfoot id="report-foot" class="sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]"></tfoot>
+                </table>
             </div>
         </div>
     </div>
@@ -286,6 +347,7 @@
         const mobileTitle = document.getElementById('mobile-title');
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJm67IZXi_zHsxQv3mqosqb6-RyKp4-j-h-kqdP153HTN8t6lt7BPE5BrwSzphArkx/exec";
         let globalDataPTE = []; // Variable global para almacenar datos
+        let globalDataMDA = []; // Variable global para Madera Aserrada
 
         function loadDashboardData() {
             const fetchPTE = fetch(GOOGLE_SCRIPT_URL + "?sheet=PRODUCTO TERMINADO").then(res => res.json());
@@ -294,64 +356,55 @@
             Promise.all([fetchPTE, fetchMDA])
                 .then(([dataPTE, dataMDA]) => {
                     globalDataPTE = dataPTE; // Guardar datos para filtrado posterior
+                    globalDataMDA = dataMDA; // Guardar datos aserrada
 
                     // Procesar Producto Terminado
                     let totalCrudoM2 = 0;
                     let totalBarnizadoM2 = 0;
                     let totalTranquillaML = 0;
 
-                    dataPTE.forEach(row => {
-                        const producto = (row['Producto'] || row['Calidad'] || '').toLowerCase();
-                        const metros = parseFloat(row['M2'] || 0);
-                        const unidad = (row['Unidad'] || 'm2').toLowerCase();
+                    // Helper para obtener valor numérico robusto (busca en varias llaves y limpia comas)
+                    const getNum = (row, keys) => {
+                        for (const k of keys) {
+                            if (row[k] !== undefined) {
+                                let val = row[k];
+                                if (typeof val === 'string') val = val.replace(/,/g, '');
+                                return parseFloat(val) || 0;
+                            }
+                        }
+                        return 0;
+                    };
 
-                        if (producto.includes('piso crudo')) {
+                    dataPTE.forEach(row => {
+                        const producto = (row['Producto'] || row['Calidad'] || row['PRODUCTO'] || '').toLowerCase();
+                        const metros = getNum(row, ['M2', 'm2', 'Metros', 'M2_Total_Fardo', 'M2 ', 'm2 ']);
+                        const unidad = (row['Unidad'] || row['UNIDAD'] || 'm2').toLowerCase();
+
+                        if (producto.includes('crudo')) {
                             totalCrudoM2 += metros;
-                        } else if (producto.includes('piso barnizado')) {
+                        } else if (producto.includes('barnizado')) {
                             totalBarnizadoM2 += metros;
                         } else if (producto.includes('tranquilla')) {
-                            if (unidad === 'ml') totalTranquillaML += metros;
+                            // Sumar si es ML o si es tranquilla (asumimos ML)
+                            if (unidad === 'ml' || producto.includes('tranquilla')) totalTranquillaML += metros;
                         }
                     });
 
                     // Procesar Madera Aserrada
                     let totalPiesTablares = 0;
-                    const porEspecie = {};
                     dataMDA.forEach(row => {
-                        const pt = parseFloat(row['PIES TABLARES'] || 0);
+                        const pt = getNum(row, ['PIES TABLARES', 'Pies Tablares', 'PT', 'pt']);
                         totalPiesTablares += pt;
-                        const especie = row['ESPECIE'] || 'Desconocida';
-                        const calidad = row['CALIDAD'] || 'Sin Calidad';
-                        if (!porEspecie[especie]) porEspecie[especie] = { total: 0, calidades: {} };
-                        porEspecie[especie].total += pt;
-                        porEspecie[especie].calidades[calidad] = (porEspecie[especie].calidades[calidad] || 0) + pt;
                     });
 
                     // Actualizar Tarjetas
-                    document.getElementById('total-barnizado').innerText = totalBarnizadoM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    document.getElementById('total-crudo').innerText = totalCrudoM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    document.getElementById('total-tranquilla').innerText = totalTranquillaML.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    document.getElementById('total-aserrada').innerText = totalPiesTablares.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    document.getElementById('total-barnizado').innerText = totalBarnizadoM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
+                    document.getElementById('total-crudo').innerText = totalCrudoM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
+                    document.getElementById('total-tranquilla').innerText = totalTranquillaML.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ml";
+                    document.getElementById('total-aserrada').innerText = totalPiesTablares.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " PT";
 
                     // Renderizar Tabla Pivot Inicial (Sin filtro)
                     renderPivotTable();
-
-                    // Actualizar detalle de madera aserrada
-                    const detalleContainer = document.getElementById('detalle-aserrada');
-                    detalleContainer.innerHTML = '';
-                    if (Object.keys(porEspecie).length > 0) {
-                        Object.keys(porEspecie).sort().forEach(especie => {
-                            const especieData = porEspecie[especie];
-                            let calidadesHTML = '<div class="pl-6 mt-2 space-y-1">';
-                            Object.keys(especieData.calidades).sort().forEach(calidad => {
-                                calidadesHTML += `<div class="flex justify-between text-sm text-slate-600"><span>- ${calidad}</span><span class="font-mono">${especieData.calidades[calidad].toLocaleString('es', { maximumFractionDigits: 2 })} PT</span></div>`;
-                            });
-                            calidadesHTML += '</div>';
-                            detalleContainer.innerHTML += `<div class="pb-2 border-b border-gray-100"><div class="flex justify-between items-center"><span class="font-bold text-slate-700">${especie}</span><span class="font-bold text-lg text-blue-600">${especieData.total.toLocaleString('es', { maximumFractionDigits: 2 })} PT</span></div>${calidadesHTML}</div>`;
-                        });
-                    } else {
-                        detalleContainer.innerHTML = '<p class="text-slate-500">No hay datos de madera aserrada.</p>';
-                    }
                 })
                 .catch(error => {
                     console.error("Error cargando datos del dashboard:", error);
@@ -360,27 +413,7 @@
                     document.getElementById('total-crudo').innerText = errorMsg;
                     document.getElementById('total-tranquilla').innerText = errorMsg;
                     document.getElementById('total-aserrada').innerText = errorMsg;
-                    document.getElementById('detalle-aserrada').innerHTML = '<p class="text-red-500">No se pudieron cargar los detalles.</p>';
                 });
-        }
-
-        function filtrarDetalle(filtro) {
-            document.getElementById('pivot-table-container').style.display = 'block';
-            document.getElementById('aserrada-detail-container').style.display = 'none';
-
-            renderPivotTable(filtro);
-            // Scroll suave hacia la tabla
-            const tableContainer = document.getElementById('pivot-table-container');
-            if(tableContainer) tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        function mostrarDetalleAserrada() {
-            document.getElementById('pivot-table-container').style.display = 'none';
-            document.getElementById('aserrada-detail-container').style.display = 'block';
-
-            // Scroll suave hacia la tabla
-            const aserradaContainer = document.getElementById('aserrada-detail-container');
-            if(aserradaContainer) aserradaContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function renderPivotTable(filtro = null) {
@@ -578,54 +611,107 @@
             thead.innerHTML = '';
             tbody.innerHTML = '';
             tfoot.innerHTML = '';
+            
+            const speciesGrid = document.getElementById('species-grid-container');
+            const genericTable = document.getElementById('generic-modal-table').parentNode;
 
-            // Filtrar datos
-            const term = type.toLowerCase().replace('piso ', ''); // 'barnizado', 'crudo', 'tranquilla'
-            const data = globalDataPTE.filter(d => {
-                // Buscar en varias posibles columnas de producto
-                const prod = (d['Producto'] || d['Calidad'] || d['PRODUCTO'] || '').toLowerCase();
-                return prod.includes(term);
-            });
+            let data = [];
+            let unitLabel = 'M²';
+            let isAserrada = type === 'Madera Aserrada';
 
-            const isTranquilla = type.toLowerCase().includes('tranquilla');
-            const unitLabel = isTranquilla ? 'ML' : 'M²';
+            if (isAserrada) {
+                // MODO MADERA ASERRADA: Mostrar Grid de Especies
+                genericTable.classList.add('hidden');
+                speciesGrid.classList.remove('hidden');
+                speciesGrid.innerHTML = '';
+
+                // Obtener especies únicas y sus totales
+                const speciesMap = {};
+                globalDataMDA.forEach(row => {
+                    const esp = row['ESPECIE'] || 'Desconocida';
+                    let ptVal = row['PIES TABLARES'] || row['PT'] || 0;
+                    if (typeof ptVal === 'string') ptVal = ptVal.replace(/,/g, '');
+                    speciesMap[esp] = (speciesMap[esp] || 0) + (parseFloat(ptVal) || 0);
+                });
+
+                Object.keys(speciesMap).sort().forEach(esp => {
+                    const btn = document.createElement('button');
+                    btn.className = "flex flex-col items-center justify-center p-6 bg-white border border-emerald-100 rounded-xl shadow-sm hover:shadow-md hover:border-emerald-300 hover:bg-emerald-50 transition-all duration-200 group";
+                    btn.onclick = () => openSpeciesReport(esp);
+                    btn.innerHTML = `
+                        <div class="p-3 bg-emerald-100 text-emerald-700 rounded-full mb-3 group-hover:bg-emerald-600 group-hover:text-white transition-colors"><i data-lucide="tree-pine" class="w-6 h-6"></i></div>
+                        <span class="font-bold text-slate-700 text-lg">${esp}</span>
+                        <span class="text-sm text-slate-500 mt-1 font-mono">${speciesMap[esp].toLocaleString('es', {maximumFractionDigits: 2})} PT</span>
+                        <span class="text-xs text-emerald-600 mt-2 font-medium">Ver Reporte Detallado &rarr;</span>
+                    `;
+                    speciesGrid.appendChild(btn);
+                });
+                lucide.createIcons();
+                return; // Salir, no renderizar tabla estándar
+            } else {
+                // MODO PISO: Mostrar Tabla Estándar
+                genericTable.classList.remove('hidden');
+                speciesGrid.classList.add('hidden');
+
+                // Filtrar datos PTE
+                const term = type.toLowerCase().replace('piso ', ''); // 'barnizado', 'crudo', 'tranquilla'
+                data = globalDataPTE.filter(d => {
+                    // Buscar en varias posibles columnas de producto
+                    const prod = (d['Producto'] || d['Calidad'] || d['PRODUCTO'] || '').toLowerCase();
+                    return prod.includes(term);
+                });
+                if (type.toLowerCase().includes('tranquilla')) unitLabel = 'ML';
+            }
 
             // Agrupar datos
             const species = {};
             const dimensions = new Set();
 
+            // Helper para corregir fechas (ej: 3/4 -> 2026-04-03 -> 3/4)
+            const formatDim = (v) => {
+                if (typeof v === 'string' && v.includes('T') && !isNaN(Date.parse(v))) {
+                    const d = new Date(v);
+                    return `${d.getDate()}/${d.getMonth() + 1}`;
+                }
+                return v;
+            };
+
             data.forEach(row => {
-                // Helper para obtener valor insensible a mayúsculas/variaciones
-                const getVal = (keys) => {
-                    for (const k of keys) if (row[k] !== undefined) return row[k];
-                    return '';
-                };
+                let esp, dimKey, val;
 
-                // Helper para corregir fechas (ej: 3/4 -> 2026-04-03 -> 3/4)
-                const formatDim = (v) => {
-                    if (typeof v === 'string' && v.includes('T') && !isNaN(Date.parse(v))) {
-                        const d = new Date(v);
-                        return `${d.getDate()}/${d.getMonth() + 1}`;
-                    }
-                    return v;
-                };
+                if (isAserrada) {
+                    esp = row['ESPECIE'] || 'Sin Especie';
+                    const grosor = formatDim(row['GROSOR'] || 'S/G');
+                    dimKey = grosor; // En aserrada agrupamos por grosor
+                    // Usar lógica robusta para obtener PT
+                    let ptVal = row['PIES TABLARES'] || row['PT'] || 0;
+                    if (typeof ptVal === 'string') ptVal = ptVal.replace(/,/g, '');
+                    val = parseFloat(ptVal) || 0;
+                } else {
+                    // Helper para obtener valor insensible a mayúsculas/variaciones
+                    const getVal = (keys) => {
+                        for (const k of keys) if (row[k] !== undefined) return row[k];
+                        return '';
+                    };
 
-                const esp = getVal(['Especie', 'ESPECIE', 'especie']) || 'Sin Especie';
-                const grosor = formatDim(getVal(['Grosor "', 'Grosor', 'GROSOR', 'grosor']));
-                const ancho = formatDim(getVal(['Ancho "', 'Ancho', 'ANCHO', 'ancho']));
-                
-                // Buscar M2 en varias columnas posibles
-                let val = parseFloat(getVal(['M2', 'm2', 'Metros', 'M2_Total_Fardo'])) || 0;
-                
-                // Si es tranquilla, intentamos buscar ML si M2 es 0, o usamos M2 si es lo que hay
-                const unidad = (getVal(['Unidad', 'UNIDAD', 'unidad']) || 'm2').toLowerCase();
+                    esp = getVal(['Especie', 'ESPECIE', 'especie']) || 'Sin Especie';
+                    const grosor = formatDim(getVal(['Grosor "', 'Grosor', 'GROSOR', 'grosor']));
+                    const ancho = formatDim(getVal(['Ancho "', 'Ancho', 'ANCHO', 'ancho']));
+                    dimKey = `${grosor} x ${ancho}`;
+                    
+                    // Buscar M2 en varias columnas posibles
+                    let m2Val = getVal(['M2', 'm2', 'Metros', 'M2_Total_Fardo']);
+                    if (typeof m2Val === 'string') m2Val = m2Val.replace(/,/g, '');
+                    val = parseFloat(m2Val) || 0;
+                    
+                    // Si es tranquilla, intentamos buscar ML si M2 es 0, o usamos M2 si es lo que hay
+                    const unidad = (getVal(['Unidad', 'UNIDAD', 'unidad']) || 'm2').toLowerCase();
 
-                // Validar unidad para Tranquilla vs Otros
-                // (Relajamos la validación: si es tranquilla mostramos el dato aunque diga m2, asumiendo que es el dato correcto)
-                if (!isTranquilla && unidad === 'ml') return; 
+                    // Validar unidad para Tranquilla vs Otros
+                    if (unitLabel === 'M²' && unidad === 'ml') return; 
+                }
 
                 if (val > 0) {
-                    const dimKey = `${grosor} x ${ancho}`;
                     dimensions.add(dimKey);
                     
                     if (!species[esp]) species[esp] = { total: 0 };
