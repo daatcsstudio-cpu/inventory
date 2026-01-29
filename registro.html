@@ -339,6 +339,24 @@
         cargarInventarioRemoto();
         document.getElementById('loteId').addEventListener('input', actualizarLista);
         
+        // Intentar reconexión automática (Chrome/Bluefy)
+        if (navigator.bluetooth && navigator.bluetooth.getDevices) {
+            navigator.bluetooth.getDevices().then(devices => {
+                const myPrinter = devices.find(d => d.name.includes('MTH') || d.name.includes('Printer'));
+                if (myPrinter) {
+                    myPrinter.gatt.connect()
+                    .then(server => server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb'))
+                    .then(service => service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb'))
+                    .then(characteristic => {
+                        printCharacteristic = characteristic;
+                        bluetoothDevice = myPrinter;
+                        console.log("✅ Impresora reconectada automáticamente");
+                    })
+                    .catch(e => console.log("Reconexión auto fallida:", e));
+                }
+            });
+        }
+
         // Render inicial
         actualizarLista();
     };
@@ -797,6 +815,8 @@
     // --- Lógica Bluetooth (Web Bluetooth API) ---
     async function conectarBluetooth() {
         try {
+            if (!navigator.bluetooth) throw new Error("Navegador no compatible (Usa Bluefy o Chrome)");
+
             // Solicitar dispositivo (acepta todos para encontrar la MTH)
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
@@ -812,24 +832,25 @@
             alert("¡Conectado a " + bluetoothDevice.name + "!");
         } catch (error) {
             console.error(error);
-            alert("Error al conectar: " + error + "\n\nAsegúrate de usar Bluefy y tener el Bluetooth encendido.");
+            if (error.name === 'NotFoundError') return; // Usuario canceló
+            alert("Error al conectar: " + error.message);
         }
     }
 
     async function imprimirBluetooth(index) {
-        if (!printCharacteristic) {
-            alert("Primero debes conectar la impresora (Botón Gris arriba)");
-            return;
-        }
-
-        const f = fardosData[index];
-        
         try {
+            // Auto-conectar si no está listo
+            if (!printCharacteristic) {
+                await conectarBluetooth();
+                if (!printCharacteristic) return; // Si canceló o falló
+            }
+
+            const f = fardosData[index];
             // Usar la función compartida del archivo externo
             await imprimirEtiquetaTerminado(printCharacteristic, f);
         } catch (error) {
-            alert("Error enviando datos: " + error);
-            conectarBluetooth();
+            alert("Error enviando datos: " + error.message);
+            printCharacteristic = null; // Resetear para forzar reconexión
         }
     }
 </script>
