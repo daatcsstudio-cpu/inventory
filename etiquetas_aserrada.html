@@ -207,6 +207,26 @@
             document.getElementById('searchBulto').addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') buscarBulto();
             });
+
+            // Intentar reconexión automática (Chrome/Bluefy)
+            if (navigator.bluetooth && navigator.bluetooth.getDevices) {
+                navigator.bluetooth.getDevices().then(devices => {
+                    const myPrinter = devices.find(d => d.name && (d.name.includes('MTH') || d.name.includes('Printer')));
+                    if (myPrinter) {
+                        myPrinter.gatt.connect()
+                        .then(server => server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb'))
+                        .then(service => service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb'))
+                        .then(characteristic => {
+                            printCharacteristic = characteristic;
+                            bluetoothDevice = myPrinter;
+                            console.log("✅ Impresora reconectada automáticamente");
+                            const status = document.getElementById('status');
+                            if(status) { status.innerText = "✅ Impresora reconectada"; status.style.color = "green"; }
+                        })
+                        .catch(e => console.log("Reconexión auto fallida:", e));
+                    }
+                });
+            }
         };
 
         function cargarInventario() {
