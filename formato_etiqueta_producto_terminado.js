@@ -68,21 +68,11 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
     // --- ENVIAR A LA IMPRESORA (Chunking Optimizado) ---
     const encodedData = encoder.encode(cmd);
     
-    /* IMPORTANTE: Bluefy y Meitong funcionan mejor con chunks de 20 bytes 
-       y un delay pequeño para no desbordar el búfer de la impresora.
-    */
-    const CHUNK_SIZE = 20; 
+    // Configuración validada por el usuario para MHT-L1081
+    const CHUNK_SIZE = 50; 
     for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
-        const chunk = encodedData.slice(i, i + CHUNK_SIZE);
-        try {
-            // Priorizamos writeWithoutResponse para evitar bloqueos en iOS
-            await printCharacteristic.writeValueWithoutResponse(chunk);
-        } catch (e) {
-            // Fallback en caso de que la característica no soporte el modo anterior
-            await printCharacteristic.writeValue(chunk);
-        }
-        // Aumentamos a 50ms para asegurar que el buffer de la MHT-L1081 no se desborde en iOS
-        await new Promise(resolve => setTimeout(resolve, 50)); 
+        await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
+        await new Promise(resolve => setTimeout(resolve, 20)); 
     }
 
     if (!silent) alert("Etiqueta enviada a " + fardo.fardoNo);

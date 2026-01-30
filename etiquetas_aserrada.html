@@ -211,11 +211,11 @@
             // Intentar reconexión automática (Chrome/Bluefy)
             if (navigator.bluetooth && navigator.bluetooth.getDevices) {
                 navigator.bluetooth.getDevices().then(devices => {
-                    const myPrinter = devices.find(d => d.name && (d.name.includes('MHT') || d.name.includes('Printer')));
+                    const myPrinter = devices.find(d => d.name === 'MTH-L1081-13E2');
                     if (myPrinter) {
                         myPrinter.gatt.connect()
-                        .then(server => server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb'))
-                        .then(service => service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb'))
+                        .then(server => server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb'))
+                        .then(service => service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb'))
                         .then(characteristic => {
                             printCharacteristic = characteristic;
                             bluetoothDevice = myPrinter;
@@ -397,54 +397,23 @@
         async function conectarBluetooth() {
             const statusDiv = document.getElementById('status');
             if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
-            const btn = document.querySelector('button.btn-bt');
-            const originalText = btn ? btn.innerText : "Conectar";
 
             try {
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb']
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
                 });
                 
-                if(btn) btn.innerText = "🔗 Vinculando...";
                 const server = await bluetoothDevice.gatt.connect();
-                
-                let characteristic;
-
-                // Intentar servicio MHT directamente (ff00)
-                try {
-                    const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-                    characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-                } catch (e) {
-                    const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                    characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                }
-
-                if (!characteristic) throw new Error("No se encontró servicio de impresión compatible.");
-
-                printCharacteristic = characteristic;
+                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
                 
                 if(statusDiv) {
                     statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name;
-                    statusDiv.style.color = "green";
-                }
-                if(btn) {
-                    btn.innerText = "✅ Conectado";
-                    btn.style.backgroundColor = "#27ae60";
                 }
                 alert("¡Conectado a " + bluetoothDevice.name + "!");
             } catch (error) {
                 console.error(error);
-                if(statusDiv) { 
-                    statusDiv.innerText = "❌ Error de conexión"; 
-                    statusDiv.style.color = "red"; 
-                }
-                if(btn) {
-                    btn.innerText = "❌ Error";
-                    btn.style.backgroundColor = "#e74c3c";
-                    setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = ""; }, 3000);
-                }
-                alert("Error al conectar: " + error + "\n\nAsegúrate de usar Bluefy y tener el Bluetooth encendido.");
             }
         }
 
@@ -506,17 +475,12 @@
                 cmd += "PRINT 1,1\r\n";
 
                 const encodedData = encoder.encode(cmd);
-                const CHUNK_SIZE_SAFE = 20; // Usar 20 bytes para seguridad
-                for (let i = 0; i < encodedData.length; i += CHUNK_SIZE_SAFE) {
-                    const chunk = encodedData.slice(i, i + CHUNK_SIZE_SAFE);
-                    if (printCharacteristic.properties.writeWithoutResponse) {
-                        await printCharacteristic.writeValueWithoutResponse(chunk);
-                    } else {
-                        await printCharacteristic.writeValue(chunk);
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                const CHUNK_SIZE = 50;
+                for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
+                    await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
+                    await new Promise(resolve => setTimeout(resolve, 20));
                 }
-                await new Promise(resolve => setTimeout(resolve, 500)); // Pausa entre etiquetas
+                await new Promise(resolve => setTimeout(resolve, 300)); // Pausa entre etiquetas
             }
             alert("Impresión Bluetooth finalizada.");
         }

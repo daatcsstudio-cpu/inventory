@@ -293,6 +293,23 @@
         if(localStorage.getItem('last_lote')) document.getElementById('loteId').value = localStorage.getItem('last_lote');
         if(localStorage.getItem('last_fardo')) document.getElementById('fardoNo').value = localStorage.getItem('last_fardo');
         
+        // Reconexión automática para MTH-L1081-13E2
+        if (navigator.bluetooth && navigator.bluetooth.getDevices) {
+            navigator.bluetooth.getDevices().then(devices => {
+                const myPrinter = devices.find(d => d.name === 'MTH-L1081-13E2');
+                if (myPrinter) {
+                    myPrinter.gatt.connect()
+                    .then(server => server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb'))
+                    .then(service => service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb'))
+                    .then(characteristic => {
+                        printCharacteristic = characteristic;
+                        bluetoothDevice = myPrinter;
+                        console.log("✅ Impresora reconectada automáticamente");
+                    });
+                }
+            });
+        }
+
         document.getElementById('newPiezas').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 if (this.value.trim() === "" && currentDetalles.length > 0) {
@@ -773,57 +790,18 @@
 
     // --- Lógica Bluetooth (Web Bluetooth API) ---
     async function conectarBluetooth() {
-        const btn = document.querySelector('button[onclick="conectarBluetooth()"]');
-        if (!btn) return;
-        const originalText = btn.innerText;
-        btn.innerText = "⏳ Buscando...";
-        btn.style.backgroundColor = "#f39c12"; // Naranja
-
         try {
-            // 1. Limpieza preventiva: Si ya existe un objeto, desconectamos
-            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-                await bluetoothDevice.gatt.disconnect();
-            }
-
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
-                optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb']
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
             });
             
-            btn.innerText = "🔗 Conectando...";
             const server = await bluetoothDevice.gatt.connect();
-            
-            btn.innerText = "🔍 Configurando...";
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Pausa de estabilidad para el hardware MHT
-            
-            let characteristic;
-
-            // Intentar servicio MHT directamente (ff00)
-            try {
-                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-                characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-            } catch (e) {
-                try {
-                    const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                    characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                } catch (e2) {}
-            }
-
-            if (!characteristic) throw new Error("No se encontró servicio de impresión compatible.");
-
-            printCharacteristic = characteristic;
-            
-            btn.innerText = "✅ Conectado";
-            btn.style.backgroundColor = "#27ae60"; // Verde
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
             alert("¡Conectado a " + bluetoothDevice.name + "!");
         } catch (error) {
-            console.error(error);
-            if(btn) {
-                btn.innerText = "❌ Error";
-                btn.style.backgroundColor = "#e74c3c"; // Rojo
-                setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = ""; }, 3000);
-            }
-            alert("Error al conectar: " + error.message + "\n\nTip: Si se queda pegado, apaga y enciende el Bluetooth de la impresora.");
+            console.log("Error: " + error);
         }
     }
 
