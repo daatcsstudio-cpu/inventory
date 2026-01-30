@@ -542,6 +542,24 @@
                 });
             }
 
+            // --- CÁLCULOS ADICIONALES (P2 y M3) ---
+            // Helper para convertir fracción (ej: 3/4) a decimal
+            const parseFraction = (str) => {
+                if (!str) return 0;
+                if (String(str).includes('/')) {
+                    const parts = str.split('/');
+                    return parseInt(parts[0]) / parseInt(parts[1]);
+                }
+                return parseFloat(str);
+            };
+
+            const grosorVal = parseFraction(document.getElementById('grosor').value);
+            // Si es ML, convertimos a M2 real para el cálculo de volumen. Si es M2, ya lo tenemos.
+            const m2Real = (unidad === 'ml') ? totalMetros * (anchoGlobal * 0.0254) : totalMetros;
+            
+            const m3 = parseFloat((m2Real * (grosorVal * 0.0254)).toFixed(4)); // M2 * Grosor(m)
+            const p2 = parseFloat((m2Real * 10.7639).toFixed(2)); // M2 * 10.7639
+
             const fardo = {
                 lote: document.getElementById('loteId').value,
                 fardoNo: document.getElementById('fardoNo').value,
@@ -551,6 +569,8 @@
                 especie: document.getElementById('especie').value,
                 detalles: [...currentDetalles], // Copia del array
                 m2: parseFloat(totalMetros.toFixed(2)), // Número puro (ej: 12.5) para que Sheets use su formato
+                p2: p2,
+                m3: m3,
                 unidad: unidad
             };
 
@@ -735,6 +755,18 @@
         // Eliminar de la lista (para que al guardar no se duplique)
         fardosData.splice(index, 1);
         guardarDatosLocales();
+
+        // --- CORRECCIÓN PARA PERMITIR EDICIÓN ---
+        // Eliminamos temporalmente este fardo de la memoria de "inventarioRemoto"
+        // para que la validación de duplicados no bloquee el guardado.
+        const remoteIndex = inventarioRemoto.findIndex(r => 
+            String(r['# Lote']) === String(f.lote) && 
+            String(r['# Fardo']) === String(f.fardoNo)
+        );
+        if (remoteIndex !== -1) {
+            inventarioRemoto.splice(remoteIndex, 1);
+        }
+
         actualizarLista();
         
         // Scroll hacia arriba para editar
