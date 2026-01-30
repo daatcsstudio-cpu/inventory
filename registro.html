@@ -814,23 +814,29 @@
 
     // --- Lógica Bluetooth (Web Bluetooth API) ---
     async function conectarBluetooth() {
+        const SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
+        const CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
+
         try {
-            // Solicitar dispositivo (acepta todos para encontrar la MTH)
+            console.log("Solicitando dispositivo...");
             bluetoothDevice = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] // Servicio estándar de impresoras
+                // Es mejor filtrar por el servicio directamente para que Bluefy sea más preciso
+                filters: [{ services: [SERVICE_UUID] }],
+                optionalServices: [SERVICE_UUID]
             });
             
+            console.log("Conectando al servidor GATT...");
             const server = await bluetoothDevice.gatt.connect();
-            // Intentamos obtener el servicio de impresión estándar
-            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-            // Característica de escritura estándar
-            printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
             
-            alert("¡Conectado a " + bluetoothDevice.name + "!");
+            console.log("Obteniendo servicio...");
+            const service = await server.getPrimaryService(SERVICE_UUID);
+            
+            console.log("Obteniendo característica...");
+            printCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+            
+            alert("✅ Conectado exitosamente a: " + bluetoothDevice.name);
         } catch (error) {
-            console.error(error);
-            if (error.name === 'NotFoundError') return; // Usuario canceló
+            console.error("Error detallado:", error);
             alert("Error al conectar: " + error.message);
         }
     }
