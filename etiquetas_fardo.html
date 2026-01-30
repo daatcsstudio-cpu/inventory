@@ -347,30 +347,27 @@
 
 async function conectarBluetooth() {
     const statusDiv = document.getElementById('status');
-    if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
-
+    const btn = document.querySelector('.btn-bt');
+    if(statusDiv) statusDiv.innerText = "⏳ Buscando...";
+    
     try {
-        // Solicitar dispositivo (acepta todos para encontrar la MTH)
+        // Filtramos específicamente por el nombre de tu modelo y el servicio FF00
         bluetoothDevice = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
+            filters: [
+                { namePrefix: 'MHT' }, 
+                { namePrefix: 'MPT' }
+            ],
+            optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb']
         });
         
+        if(btn) btn.innerText = "🔗 Conectando...";
         const server = await bluetoothDevice.gatt.connect();
         
-        let characteristic;
-
-        // 1. MHT
-        try {
-            const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-            characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-        } catch (e) {}
-
-        // 2. Estándar
-        if (!characteristic) {
-            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-            characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-        }
+        // Usamos el Service UUID FF00 de tu captura
+        const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+        
+        // Usamos la Characteristic UUID FF02 de tu captura
+        const characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
 
         printCharacteristic = characteristic;
         
@@ -378,15 +375,15 @@ async function conectarBluetooth() {
             statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; 
             statusDiv.style.color = "green"; 
         }
-        alert("¡Conectado a " + bluetoothDevice.name + "!");
-
-    } catch (error) {
-        if(statusDiv) { 
-            statusDiv.innerText = "❌ Error de conexión"; 
-            statusDiv.style.color = "red"; 
+        if(btn) {
+            btn.innerText = "✅ Conectado";
+            btn.style.backgroundColor = "#27ae60";
         }
+        alert("¡Conectado a " + bluetoothDevice.name + "!");
+    } catch (error) {
         console.error(error);
-        alert("Error al conectar: " + error + "\n\nAsegúrate de usar Bluefy y tener el Bluetooth encendido.");
+        if(statusDiv) { statusDiv.innerText = "❌ Error"; statusDiv.style.color = "red"; }
+        alert("Error: " + error.message);
     }
 }
 

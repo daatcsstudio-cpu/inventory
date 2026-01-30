@@ -776,35 +776,37 @@
         const btn = document.querySelector('button[onclick="conectarBluetooth()"]');
         if (!btn) return;
         const originalText = btn.innerText;
-        btn.innerText = "⏳ Conectando...";
+        btn.innerText = "⏳ Buscando...";
         btn.style.backgroundColor = "#f39c12"; // Naranja
 
         try {
+            // Forzar desconexión si ya existe un objeto previo para limpiar el canal
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                try { await bluetoothDevice.gatt.disconnect(); } catch(e) {}
+            }
+
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 filters: [{ namePrefix: 'MHT' }, { namePrefix: 'Printer' }, { namePrefix: 'MPT' }],
                 optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
             });
             
-            btn.innerText = "🔗 Vinculando...";
+            btn.innerText = "🔗 Conectando...";
             const server = await bluetoothDevice.gatt.connect();
             
-            btn.innerText = "🔍 Buscando Servicio...";
-            await new Promise(resolve => setTimeout(resolve, 500)); // Pausa de estabilidad para iOS
+            btn.innerText = "🔍 Configurando...";
+            await new Promise(resolve => setTimeout(resolve, 800)); // Pausa de estabilidad aumentada para iOS
             
             let characteristic;
 
-            // Intentar servicio MHT directamente (ff00)
+            // Intentar servicio MHT directamente (ff00) - Es el más rápido
             try {
                 const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
                 characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
             } catch (e) {
-                console.log("MHT service not found, trying standard...");
                 try {
                     const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
                     characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                } catch (e2) {
-                    console.log("Standard service not found.");
-                }
+                } catch (e2) {}
             }
 
             if (!characteristic) throw new Error("No se encontró servicio de impresión compatible.");
