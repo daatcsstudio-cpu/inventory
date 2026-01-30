@@ -358,17 +358,17 @@ async function conectarBluetooth() {
         
         const server = await bluetoothDevice.gatt.connect();
         
-        let service, characteristic;
+        let characteristic;
 
         // 1. Estándar
         try {
-            service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
             characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
         } catch (e) {}
 
         // 2. MHT
         if (!characteristic) {
-            service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+            const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
             characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
         }
 

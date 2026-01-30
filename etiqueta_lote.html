@@ -361,7 +361,11 @@
             const encodedData = encoder.encode(cmd);
             const CHUNK_SIZE = 20; // Reducido a 20 para estabilidad
             for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
-                await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
+                if (printCharacteristic.properties.write) {
+                    await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
+                } else {
+                    await printCharacteristic.writeValueWithoutResponse(encodedData.slice(i, i + CHUNK_SIZE));
+                }
                 await new Promise(resolve => setTimeout(resolve, 80)); // Pausa aumentada
             }
             alert("✅ Etiqueta de Lote enviada.");
@@ -385,17 +389,17 @@
             
             const server = await bluetoothDevice.gatt.connect();
             
-            let service, characteristic;
+            let characteristic;
 
             // 1. Estándar
             try {
-                service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
                 characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
             } catch (e) {}
 
             // 2. MHT
             if (!characteristic) {
-                service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
                 characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
             }
 

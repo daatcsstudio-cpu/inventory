@@ -72,7 +72,13 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
     const encodedData = encoder.encode(cmd);
     const CHUNK_SIZE = 50;
     for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
-        await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
+        const chunk = encodedData.slice(i, i + CHUNK_SIZE);
+        // Detectar si usar escritura con o sin respuesta
+        if (printCharacteristic.properties.write) {
+            await printCharacteristic.writeValue(chunk);
+        } else {
+            await printCharacteristic.writeValueWithoutResponse(chunk);
+        }
         await new Promise(resolve => setTimeout(resolve, 20));
     }
 }
