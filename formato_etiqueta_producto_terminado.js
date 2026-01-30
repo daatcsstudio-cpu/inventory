@@ -81,8 +81,8 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
             // Fallback en caso de que la característica no soporte el modo anterior
             await printCharacteristic.writeValue(chunk);
         }
-        // Delay de 30ms es suficiente para Meitong; 100ms puede ser muy lento para etiquetas grandes
-        await new Promise(resolve => setTimeout(resolve, 30)); 
+        // Aumentamos a 50ms para asegurar que el buffer de la MHT-L1081 no se desborde en iOS
+        await new Promise(resolve => setTimeout(resolve, 50)); 
     }
 
     if (!silent) alert("Etiqueta enviada a " + fardo.fardoNo);

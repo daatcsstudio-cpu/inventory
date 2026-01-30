@@ -780,25 +780,28 @@
         btn.style.backgroundColor = "#f39c12"; // Naranja
 
         try {
-            // Forzar desconexión si ya existe un objeto previo para limpiar el canal
+            // 1. Limpieza preventiva: Si ya existe un objeto, desconectamos
             if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-                try { await bluetoothDevice.gatt.disconnect(); } catch(e) {}
+                await bluetoothDevice.gatt.disconnect();
             }
 
             bluetoothDevice = await navigator.bluetooth.requestDevice({
-                filters: [{ namePrefix: 'MHT' }, { namePrefix: 'Printer' }, { namePrefix: 'MPT' }],
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
+                filters: [
+                    { name: 'MHT-L1081-13E2-B' },
+                    { namePrefix: 'MHT' }
+                ],
+                optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb', '0000fee7-0000-1000-8000-00805f9b34fb']
             });
             
             btn.innerText = "🔗 Conectando...";
             const server = await bluetoothDevice.gatt.connect();
             
             btn.innerText = "🔍 Configurando...";
-            await new Promise(resolve => setTimeout(resolve, 800)); // Pausa de estabilidad aumentada para iOS
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Pausa de estabilidad para el hardware MHT
             
             let characteristic;
 
-            // Intentar servicio MHT directamente (ff00) - Es el más rápido
+            // Intentar servicio MHT directamente (ff00)
             try {
                 const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
                 characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
