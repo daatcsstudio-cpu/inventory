@@ -369,21 +369,6 @@
         </div>
     </div>
 
-    <!-- PANTALLA DE LOGIN -->
-    <div id="login-screen" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-            <div class="text-center mb-8">
-                <h1 class="text-2xl font-bold text-slate-800">Acceso al Sistema</h1>
-            </div>
-            <div class="space-y-4">
-                <input type="text" id="user-login" placeholder="Usuario" class="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="password" id="pass-login" placeholder="Contraseña" class="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
-                <button onclick="intentarLogin()" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">Entrar</button>
-            </div>
-            <p id="login-error" class="text-red-500 text-sm mt-4 hidden text-center">Credenciales incorrectas</p>
-        </div>
-    </div>
-
     <script>
         lucide.createIcons(); // Inicializar iconos
 
@@ -1249,6 +1234,62 @@
             // 5. Footer (Totales Generales)
             const tfoot = document.getElementById('report-foot');
             tfoot.innerHTML = `<tr class="report-total-row text-white bg-emerald-900"><td colspan="2" class="px-4 py-3 text-right text-lg">TOTAL GENERAL PT</td>${largos.map(l => `<td class="px-2 py-3">${colTotals[l].toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`).join('')}<td class="px-2 py-3 bg-emerald-800">${grandSum35.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 bg-emerald-800">${grandSum67.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 bg-emerald-800">${grandSum8Plus.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 text-xl bg-emerald-950 text-yellow-400">${grandTotal.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>`;
+        }
+
+        // --- LÓGICA DE LOGIN Y SALUDOS ---
+        function actualizarSaludoFijo(nombre) {
+            const hora = new Date().getHours();
+            let saludoBase = "";
+
+            if (hora >= 6 && hora < 12) {
+                saludoBase = "Buenos días";
+            } else if (hora >= 12 && hora < 18) {
+                saludoBase = "Buenas tardes";
+            } else {
+                saludoBase = "Buenas noches";
+            }
+
+            const textoCompleto = `${saludoBase}, ${nombre}`;
+            document.getElementById('user-greeting-mobile').innerText = textoCompleto;
+            document.getElementById('user-greeting-desktop').innerText = textoCompleto;
+        }
+
+        function intentarLogin() {
+            const user = document.getElementById('user-login').value;
+            const pass = document.getElementById('pass-login').value;
+            const errorMsg = document.getElementById('login-error');
+
+            if (user === "admin" && pass === "gibor2026") {
+                actualizarSaludoFijo("Michelle Giron");
+                configurarVista("admin");
+            } else if (user === "inventario" && pass === "inventario2026") {
+                actualizarSaludoFijo("Jose Corado");
+                configurarVista("inventario");
+            } else {
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+            document.getElementById('login-screen').classList.add('hidden');
+        }
+
+        function configurarVista(rol) {
+            const navItems = document.querySelectorAll('.nav-item');
+            const sections = document.querySelectorAll('.pt-6'); // Títulos de sección en sidebar
+
+            if (rol === "admin") {
+                navItems.forEach(item => {
+                    const spanText = item.querySelector('span').innerText.trim();
+                    // Solo permite ver "Inicio"
+                    if (spanText !== "Inicio") {
+                        item.style.display = 'none';
+                    }
+                });
+                sections.forEach(sec => sec.style.display = 'none');
+            } else {
+                // Usuario inventario ve todo
+                navItems.forEach(item => item.style.display = 'flex');
+                sections.forEach(sec => sec.style.display = 'block');
+            }
         }
     </script>
 </body>
