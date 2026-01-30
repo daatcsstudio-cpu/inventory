@@ -575,7 +575,6 @@
             // Enviar el objeto fardo completo.
             fetch(GOOGLE_SCRIPT_URL, {
                 method: "POST",
-                body: JSON.stringify(fardo)
                 body: JSON.stringify(payload)
             })
             .then(res => console.log("Enviado a Sheets"))
@@ -601,7 +600,11 @@
             // Intentar imprimir (protegido contra errores para no detener el flujo)
             if (autoPrint) {
                 try {
-                    imprimir(fardosData.length - 1); 
+                    if (printCharacteristic) {
+                        imprimirBluetooth(fardosData.length - 1, true); // Impresión silenciosa si hay BT
+                    } else {
+                        imprimir(fardosData.length - 1); 
+                    }
                 } catch(e) {
                     console.error("Error al imprimir:", e);
                 }
@@ -889,7 +892,7 @@
         }
     }
 
-    async function imprimirBluetooth(index) {
+    async function imprimirBluetooth(index, silent = false) {
         try {
             // Auto-conectar si no está listo
             if (!printCharacteristic) {
@@ -899,7 +902,7 @@
 
             const f = fardosData[index];
             // Usar la función compartida del archivo externo
-            await imprimirEtiquetaTerminado(printCharacteristic, f);
+            await imprimirEtiquetaTerminado(printCharacteristic, f, silent);
         } catch (error) {
             // El alert ya se mostró en la función compartida (si silent=false), pero reseteamos aquí
             printCharacteristic = null; // Resetear para forzar reconexión
