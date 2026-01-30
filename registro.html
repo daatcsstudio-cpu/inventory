@@ -190,6 +190,7 @@
     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
         <button class="btn-bt" onclick="conectarBluetooth()" style="margin-bottom:0; flex: 1;">📡 Conectar BT</button>
         <button id="btnAutoPrint" class="btn-bt" onclick="toggleAutoPrint()" style="margin-bottom:0; flex: 1; background-color: #2ecc71; color: white;">🖨️ Auto: ON</button>
+        <button class="btn-bt" onclick="imprimirTest()" style="margin-bottom:0; width: 60px; background-color: #34495e; color: white;">🛠️</button>
     </div>
 
     <div class="card">
@@ -838,7 +839,8 @@
                 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // MPT-II / Chinas
                 '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Feasycom/Transparent
                 '0000ff00-0000-1000-8000-00805f9b34fb', // MHT
-                '6e400001-b5a3-f393-e0a9-e50e24dcca9e'  // Nordic UART
+                '0000ae00-0000-1000-8000-00805f9b34fb', // MHT Variante
+                '6e400001-b5a3-f393-e0a9-e50e24dcca9e'  // Nordic UART / Varios
             ];
 
             debug('📋 Servicios a buscar: ' + servicios.length, 'info');
@@ -888,7 +890,31 @@
                     if (characteristic) break;
                     
                 } catch (e) {
-                    debug(`   ⚠️ Servicio ${uuid.substring(0, 8)}... no disponible`, 'warning');
+                    // Silencioso para no llenar el log
+                }
+            }
+
+            // FALLBACK: Si no se encontró en la lista conocida, buscar en TODOS los servicios disponibles
+            if (!characteristic) {
+                debug('⚠️ Servicios conocidos fallaron. Iniciando escaneo profundo...', 'warning');
+                try {
+                    const allServices = await server.getPrimaryServices();
+                    debug(`   Dispositivo ofrece ${allServices.length} servicios totales`, 'info');
+                    
+                    for (const service of allServices) {
+                        const chars = await service.getCharacteristics();
+                        for (const char of chars) {
+                            if (char.properties.write || char.properties.writeWithoutResponse) {
+                                characteristic = char;
+                                servicioEncontrado = service.uuid;
+                                debug(`✅ Característica descubierta en escaneo: ${char.uuid}`, 'success');
+                                break;
+                            }
+                        }
+                        if (characteristic) break;
+                    }
+                } catch (e) {
+                    debug('❌ Falló el escaneo profundo: ' + e.message, 'error');
                 }
             }
 
@@ -1038,6 +1064,23 @@
             if (!silent) {
                 alert(`❌ Error al imprimir:\n\n${error.message}\n\nRevisa el log de debug para más detalles.\n\nSi persiste, reconecta la impresora.`);
             }
+        }
+    }
+
+    async function imprimirTest() {
+        if (!printCharacteristic) {
+            await conectarBluetooth();
+            if (!printCharacteristic) return;
+        }
+        
+        try {
+            const encoder = new TextEncoder();
+            const cmd = "SIZE 4,3\r\nCLS\r\nTEXT 50,50,\"3\",0,1,1,\"PRUEBA DE IMPRESION\"\r\nTEXT 50,100,\"3\",0,1,1,\"Si lees esto, funciona!\"\r\nPRINT 1,1\r\n";
+            const data = encoder.encode(cmd);
+            await printCharacteristic.writeValue(data);
+            alert("✅ Comando de prueba enviado");
+        } catch (e) {
+            alert("❌ Error en prueba: " + e.message);
         }
     }
 </script>
