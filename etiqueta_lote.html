@@ -320,6 +320,7 @@
         cmd += "GAP 0.12,0\r\n";
         cmd += "DIRECTION 1\r\n";
         cmd += "CLS\r\n";
+        cmd += "DENSITY 8\r\n";
         
         // 1. Código QR a la izquierda
         // QRCODE x,y,ECC,cell,mode,rot,model,mask,"content"
@@ -361,7 +362,7 @@
             const CHUNK_SIZE = 20; // Reducido a 20 para estabilidad
             for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
                 await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
-                await new Promise(resolve => setTimeout(resolve, 60)); // Pausa aumentada
+                await new Promise(resolve => setTimeout(resolve, 80)); // Pausa aumentada
             }
             alert("✅ Etiqueta de Lote enviada.");
         } catch (e) {

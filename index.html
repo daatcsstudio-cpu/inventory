@@ -214,6 +214,17 @@
                             <h3 class="text-slate-500 text-sm font-medium">Tranquilla (ml)</h3>
                             <p id="total-tranquilla" class="text-2xl font-bold text-slate-800 mt-1">Cargando...</p>
                         </div>
+                        
+                        <!-- Card 5: Deck -->
+                        <div onclick="openModal('Deck')" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-orange-50 text-orange-600 rounded-lg group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                                    <i data-lucide="layout" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                            <h3 class="text-slate-500 text-sm font-medium">Deck (m²)</h3>
+                            <p id="total-deck" class="text-2xl font-bold text-slate-800 mt-1">Cargando...</p>
+                        </div>
 
                         <!-- Card 4: Madera Aserrada -->
                         <div onclick="openModal('Madera Aserrada')" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
@@ -384,6 +395,7 @@
                     let totalCrudoM2 = 0;
                     let totalBarnizadoM2 = 0;
                     let totalTranquillaML = 0;
+                    let totalDeckM2 = 0;
 
                     // Helper para obtener valor numérico robusto (busca en varias llaves y limpia comas)
                     const getNum = (row, keys) => {
@@ -406,6 +418,8 @@
                             totalCrudoM2 += metros;
                         } else if (producto.includes('barnizado')) {
                             totalBarnizadoM2 += metros;
+                        } else if (producto.includes('deck')) {
+                            totalDeckM2 += metros;
                         } else if (producto.includes('tranquilla')) {
                             // Sumar si es ML o si es tranquilla (asumimos ML)
                             if (unidad === 'ml' || producto.includes('tranquilla')) totalTranquillaML += metros;
@@ -423,6 +437,7 @@
                     document.getElementById('total-barnizado').innerText = totalBarnizadoM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
                     document.getElementById('total-crudo').innerText = totalCrudoM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
                     document.getElementById('total-tranquilla').innerText = totalTranquillaML.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ml";
+                    document.getElementById('total-deck').innerText = totalDeckM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
                     document.getElementById('total-aserrada').innerText = totalPiesTablares.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " PT";
 
                     // Renderizar Tabla Pivot Inicial (Sin filtro)
@@ -434,6 +449,7 @@
                     document.getElementById('total-barnizado').innerText = errorMsg;
                     document.getElementById('total-crudo').innerText = errorMsg;
                     document.getElementById('total-tranquilla').innerText = errorMsg;
+                    document.getElementById('total-deck').innerText = errorMsg;
                     document.getElementById('total-aserrada').innerText = errorMsg;
                 });
         }

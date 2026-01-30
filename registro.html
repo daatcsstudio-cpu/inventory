@@ -217,6 +217,7 @@
                     <option value="Piso Barnizado">Barnizado</option>
                     <option value="Piso Crudo">Crudo</option>
                     <option value="Tranquilla">Tranquilla</option>
+                    <option value="Deck">Deck</option>
                 </select>
             </div>
             <div>
@@ -533,8 +534,8 @@
                 return;
             }
 
-            if (verificarDuplicado(fardo.fardoNo)) {
-                alert("⚠️ EL FARDO #" + fardo.fardoNo + " YA EXISTE (en local o en la base de datos).");
+            if (verificarDuplicado(fardo.lote, fardo.fardoNo, fardo.producto)) {
+                alert("⚠️ EL FARDO #" + fardo.fardoNo + " YA EXISTE (en local o en la base de datos) para este Lote y Producto.");
                 return;
             }
 
@@ -581,12 +582,19 @@
         localStorage.setItem('inventario_fardos', JSON.stringify(fardosData));
     }
 
-    function verificarDuplicado(numero) {
+    function verificarDuplicado(lote, fardo, producto) {
         // 1. Verificar en sesión local
-        const enLocal = fardosData.some(f => String(f.fardoNo) === String(numero));
+        const enLocal = fardosData.some(f => 
+            String(f.lote) === String(lote) && 
+            String(f.fardoNo) === String(fardo) && 
+            String(f.producto) === String(producto)
+        );
         // 2. Verificar en base de datos remota
-        // Nota: Las claves del JSON de Google Sheets suelen ser '# Fardo'
-        const enRemoto = inventarioRemoto.some(f => String(f['# Fardo']) === String(numero));
+        const enRemoto = inventarioRemoto.some(f => 
+            String(f['# Lote']) === String(lote) && 
+            String(f['# Fardo']) === String(fardo) && 
+            (f['Producto'] || f['Calidad']) === producto
+        );
         
         return enLocal || enRemoto;
     }

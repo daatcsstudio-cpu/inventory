@@ -17,7 +17,7 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
     cmd += "GAP 0.12,0\r\n";
     cmd += "DIRECTION 1\r\n";
     cmd += "CLS\r\n";
-    cmd += "DENSITY 12\r\n";
+    cmd += "DENSITY 8\r\n";
 
     // --- CÓDIGO DE BARRAS (Fardo No) ---
     // BARCODE x,y,"type",height,human_readable,rotation,narrow,wide,"content"
@@ -82,7 +82,7 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
 
         for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
             await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
-            await new Promise(resolve => setTimeout(resolve, 60));
+            await new Promise(resolve => setTimeout(resolve, 80));
         }
 
         // Si llega aquí, es que terminó de enviar todo sin errores

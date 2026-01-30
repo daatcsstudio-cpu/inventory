@@ -449,7 +449,7 @@
                 cmd += "GAP 0.12,0\r\n";
                 cmd += "DIRECTION 1\r\n";
                 cmd += "CLS\r\n";
-                cmd += "DENSITY 12\r\n";
+                cmd += "DENSITY 8\r\n";
 
                 // --- ENCABEZADO ---
                 cmd += `TEXT 40,30,"3",0,1,1,"MADERA ASERRADA"\r\n`;
@@ -489,7 +489,7 @@
                 const CHUNK_SIZE_SAFE = 20; // Usar 20 bytes para seguridad
                 for (let i = 0; i < encodedData.length; i += CHUNK_SIZE_SAFE) {
                     await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE_SAFE));
-                    await new Promise(resolve => setTimeout(resolve, 60));
+                    await new Promise(resolve => setTimeout(resolve, 80));
                 }
                 await new Promise(resolve => setTimeout(resolve, 500)); // Pausa entre etiquetas
             }
