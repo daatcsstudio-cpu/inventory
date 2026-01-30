@@ -63,6 +63,8 @@
         .btn-main { background-color: var(--primary); color: white; }
         .btn-secondary { background-color: var(--text-dark); color: white; }
         .btn-back { background-color: #e0e6ed; color: var(--text-dark); text-decoration: none; display: block; text-align: center; padding: 15px; border-radius: 15px; font-weight: bold; }
+        .btn-bt { background-color: #e67e22; color: white; margin-bottom: 15px; }
+        #btStatus { font-size: 0.8rem; text-align: center; margin-bottom: 5px; font-weight: bold; color: #95a5a6; }
 
         .table-container {
             overflow-x: auto;
@@ -115,6 +117,8 @@
 
 <div class="container">
     <h2>📝 Ingreso de Tallys</h2>
+    <div id="btStatus">Estado: Desconectado</div>
+    <button class="btn-bt" onclick="conectarBluetooth()">📡 CONECTAR IMPRESORA (Bluetooth)</button>
 
     <div class="card">
         <h3>Encabezado del Bulto</h3>
@@ -197,6 +201,7 @@
             </table>
         </div>
         <button class="btn-secondary" onclick="exportarCSV()">Exportar a CSV</button>
+        <button class="btn-bt" onclick="imprimirEtiquetaActual()" style="background-color: #34495e; margin-top: 10px;">🖨️ Imprimir Etiqueta</button>
         <button class="btn-main" onclick="guardarTally()" style="margin-top: 10px;">💾 Guardar en Nube</button>
     </div>
 
@@ -206,6 +211,8 @@
 <script>
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJm67IZXi_zHsxQv3mqosqb6-RyKp4-j-h-kqdP153HTN8t6lt7BPE5BrwSzphArkx/exec";
     let inventarioRemoto = [];
+    let bluetoothDevice;
+    let printCharacteristic;
 
     // Datos de configuración
     const especiesList = [
@@ -262,6 +269,10 @@
             opt.text = cal;
             selCalidad.appendChild(opt);
         });
+        
+        if (navigator.bluetooth && navigator.bluetooth.getDevices) {
+            navigator.bluetooth.getDevices().then(devices => { if (devices.length > 0) conectarBluetooth(true); });
+        }
     };
 
     function cargarInventario() {
@@ -271,6 +282,72 @@
             inventarioRemoto = data;
         })
         .catch(e => console.error("Error cargando inventario para validación:", e));
+    }
+    
+    // --- BLUETOOTH ---
+    async function conectarBluetooth(silent = false) {
+        const status = document.getElementById('btStatus');
+        if(!silent) status.innerText = "⏳ Buscando...";
+        try {
+            let device;
+            if (silent && navigator.bluetooth.getDevices) {
+                const devices = await navigator.bluetooth.getDevices();
+                if (devices.length > 0) device = devices[0];
+            }
+            if (!device) {
+                device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] });
+            }
+            const server = await device.gatt.connect();
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+            bluetoothDevice = device;
+            status.innerText = "✅ Conectado: " + device.name;
+            status.style.color = "#27ae60";
+            if(!silent) alert("Conectado");
+        } catch (error) {
+            status.innerText = "❌ Desconectado"; status.style.color = "red";
+            if(!silent) alert("Error: " + error.message);
+        }
+    }
+
+    async function imprimirEtiquetaActual() {
+        if (!printCharacteristic) { await conectarBluetooth(); if (!printCharacteristic) return; }
+
+        const fardo = document.getElementById('bultoNo').value;
+        const especie = document.getElementById('especie').value;
+        const calidad = document.getElementById('calidad').value;
+        const grosor = document.getElementById('espesor').options[document.getElementById('espesor').selectedIndex].text;
+        const poa = document.getElementById('poa').value;
+        const totalPzs = document.getElementById('granTotalPiezas').innerText;
+        const totalPT = document.getElementById('granTotalPT').innerText;
+        
+        if (totalPzs === "0" || totalPzs === "") return alert("Tabla vacía.");
+
+        const espObj = especiesList.find(e => e.nombre === especie);
+        const espCode = espObj ? espObj.codigo : "GEN";
+        const idCode = `MD-${poa}-${fardo}-${espCode}`;
+
+        let cmd = "SIZE 4,3\r\nGAP 0.12,0\r\nCLS\r\nDENSITY 8\r\n";
+        cmd += `TEXT 40,30,"3",0,1,1,"MADERA ASERRADA"\r\n`;
+        cmd += `TEXT 500,20,"3",0,3,3,"#${fardo}"\r\n`;
+        cmd += `BARCODE 120,90,"128",80,1,0,2,4,"${idCode}"\r\n`;
+        cmd += `BAR 40,210,730,3\r\n`;
+        cmd += `TEXT 40,240,"3",0,1,1,"Especie: ${especie}"\r\n`;
+        cmd += `TEXT 40,280,"3",0,1,1,"Calidad: ${calidad}"\r\n`;
+        cmd += `TEXT 40,320,"3",0,1,1,"Grosor: ${grosor}"\r\n`;
+        cmd += `BAR 40,400,730,3\r\n`;
+        cmd += `TEXT 40,430,"2",0,1,1,"PIEZAS"\r\nTEXT 40,460,"4",0,1,1,"${totalPzs}"\r\n`;
+        cmd += `TEXT 400,430,"2",0,1,1,"PIES TABLARES"\r\nTEXT 400,460,"4",0,1,1,"${totalPT}"\r\n`;
+        cmd += "PRINT 1,1\r\n";
+
+        const encoder = new TextEncoder();
+        const encodedData = encoder.encode(cmd);
+        const CHUNK_SIZE = 20;
+        for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
+            await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
+            await new Promise(r => setTimeout(r, 50));
+        }
+        alert("✅ Enviado");
     }
 
     function generarTabla() {
@@ -558,7 +635,11 @@
                 if (piezas > 0) {
                     const largo = parseFloat(input.dataset.largo);
                     const pt = (encabezado.espesorVal * ancho * largo / 12) * piezas;
-                    detalles.push({ ancho, largo, piezas, pt: parseFloat(pt.toFixed(2)) });
+                    const ml = (largo * 0.3048) * piezas;
+                    const m2 = (ancho * 0.0254) * (largo * 0.3048) * piezas;
+                    const m3 = pt / 423.776;
+                    
+                    detalles.push({ ancho, largo, piezas, pt: parseFloat(pt.toFixed(2)), ml: parseFloat(ml.toFixed(2)), m2: parseFloat(m2.toFixed(3)), m3: parseFloat(m3.toFixed(4)) });
                 }
             }
         }
