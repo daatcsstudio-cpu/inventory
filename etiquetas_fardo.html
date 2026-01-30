@@ -342,21 +342,25 @@
     // --- Lógica de Impresión ---
 
 async function conectarBluetooth() {
-    alert("Buscando impresora... Selecciona tu dispositivo en la lista."); // Aviso previo
+    const statusDiv = document.getElementById('status');
+    if(statusDiv) statusDiv.innerText = "⏳ Buscando impresora...";
+
     try {
         bluetoothDevice = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
             optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
         });
         
+        if(statusDiv) statusDiv.innerText = "🔗 Conectando...";
         const server = await bluetoothDevice.gatt.connect();
-        alert("🔗 Sincronizando servicios..."); // Aviso de progreso
         
         const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
         printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
         
+        if(statusDiv) { statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; statusDiv.style.color = "green"; }
         alert("✅ ¡CONECTADO! Ya puedes imprimir.");
     } catch (error) {
+        if(statusDiv) { statusDiv.innerText = "❌ Error conexión"; statusDiv.style.color = "red"; }
         alert("⚠️ Conexión cancelada o fallida: " + error.message);
     }
 }

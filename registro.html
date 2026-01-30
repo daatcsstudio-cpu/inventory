@@ -814,7 +814,6 @@
 
     // --- Lógica Bluetooth (Web Bluetooth API) ---
     async function conectarBluetooth() {
-        alert("Buscando impresora... Selecciona tu dispositivo en la lista."); // Aviso previo
         try {
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
@@ -822,7 +821,6 @@
             });
             
             const server = await bluetoothDevice.gatt.connect();
-            alert("🔗 Sincronizando servicios..."); // Aviso de progreso
             
             const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
             printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
