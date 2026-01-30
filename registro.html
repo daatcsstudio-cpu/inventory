@@ -546,52 +546,59 @@
         const grosorVal = parseFraction(grosorStr);
         const unidad = (producto === 'Tranquilla') ? 'ml' : 'm2';
 
-        // Objeto para guardar en el historial local (con totales)
-        const fardoParaHistorial = {
-            lote: lote, fardoNo: fardoNo, producto: producto, grosor: grosorStr, ancho: anchoGlobal,
-            especie: document.getElementById('especie').value, detalles: [...currentDetalles],
-            m2: 0, p2: 0, m3: 0, unidad: unidad
-        };
-
+        const filasParaEnviar = [];
         let totalMetrosFardo = 0, totalP2Fardo = 0, totalM3Fardo = 0;
 
-        // Procesar y enviar cada línea de detalle a la base de datos
         currentDetalles.forEach(d => {
-            const piezas = d.piezas;
-            const largo = d.largo;
-            
-            const m2_linea = (unidad === 'm2') ? piezas * (largo * 0.3048) * (anchoGlobal * 0.0254) : 0;
-            const ml_linea = (unidad === 'ml') ? piezas * (largo * 0.3048) : 0;
+            const m2_linea = (unidad === 'm2') ? d.piezas * (d.largo * 0.3048) * (anchoGlobal * 0.0254) : 0;
+            const ml_linea = d.piezas * (d.largo * 0.3048);
             
             const m2Real_linea = (unidad === 'ml') ? ml_linea * (anchoGlobal * 0.0254) : m2_linea;
             const p2_linea = m2Real_linea * 10.7639;
             const m3_linea = m2Real_linea * (grosorVal * 0.0254);
 
-            const payloadDeFila = {
-                lote: lote, fardoNo: fardoNo, producto: producto,
+            // Objeto plano para cada fila en la hoja de cálculo
+            filasParaEnviar.push({
+                lote: lote,
+                fardoNo: fardoNo,
+                producto: producto,
                 grosor: String(grosorStr).includes('/') ? "'" + grosorStr : grosorStr,
-                ancho: anchoGlobal, especie: document.getElementById('especie').value,
-                piezas: piezas, largo: largo,
+                ancho: anchoGlobal,
+                especie: document.getElementById('especie').value,
+                piezas: d.piezas,
+                largo: d.largo,
                 m2: parseFloat(m2_linea.toFixed(3)), ml: parseFloat(ml_linea.toFixed(2)),
                 p2: parseFloat(p2_linea.toFixed(2)), m3: parseFloat(m3_linea.toFixed(4)),
                 unidad: unidad
-            };
+            });
 
-            fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payloadDeFila) })
-                .catch(err => console.error("Error enviando fila a Sheets: " + err));
-
-            // Acumular totales para el historial local
+            // Acumular totales para el objeto de historial local
             totalMetrosFardo += (unidad === 'ml') ? ml_linea : m2_linea;
             totalP2Fardo += p2_linea;
             totalM3Fardo += m3_linea;
         });
 
-        // Finalizar el objeto para el historial local
-        fardoParaHistorial.m2 = parseFloat(totalMetrosFardo.toFixed(2));
-        fardoParaHistorial.p2 = parseFloat(totalP2Fardo.toFixed(2));
-        fardoParaHistorial.m3 = parseFloat(totalM3Fardo.toFixed(4));
+        // Payload para enviar a Google Apps Script
+        const payload = {
+            sheetName: "PRODUCTO TERMINADO", // Asegurar destino
+            filas: filasParaEnviar
+        };
 
-        // Actualizar UI y estado local
+        // Enviar un solo objeto (más estable)
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+            .then(res => console.log("Enviado a Sheets"))
+            .catch(err => console.error("Error enviando a Sheets: " + err));
+
+        // Objeto para el historial local (UI)
+        const fardoParaHistorial = {
+            lote: lote, fardoNo: fardoNo, producto: producto, grosor: grosorStr, ancho: anchoGlobal,
+            especie: document.getElementById('especie').value, detalles: [...currentDetalles],
+            m2: parseFloat(totalMetrosFardo.toFixed(2)),
+            p2: parseFloat(totalP2Fardo.toFixed(2)),
+            m3: parseFloat(totalM3Fardo.toFixed(4)),
+            unidad: unidad
+        };
+
         fardosData.push(fardoParaHistorial);
         guardarDatosLocales();
         
@@ -649,7 +656,7 @@
         let unidadLote = 'm²';
 
         if (locales.length > 0) {
-            unidadLote = locales[0].unidad === 'ml' ? 'ml' : 'm²';
+            unidadLote = (locales[0].unidad === 'ml' || locales[0].producto === 'Tranquilla') ? 'ml' : 'm²';
         } else if (remotos.length > 0) {
             unidadLote = (remotos[0]['Unidad'] || 'm2') === 'ml' ? 'ml' : 'm²';
         }
@@ -871,22 +878,46 @@
         if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
         try {
             let device;
-            // Intentar obtener dispositivos ya emparejados primero
-            if (navigator.bluetooth.getDevices) {
-                const devices = await navigator.bluetooth.getDevices();
-                if (devices.length > 0) device = devices[0];
-            }
+            
+            // Lista de servicios comunes para impresoras térmicas (Estándar, Chinas, Feasycom)
+            const serviciosOpcionales = [
+                '000018f0-0000-1000-8000-00805f9b34fb', // Estándar TSPL
+                'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Impresoras Chinas / MPT-II
+                '49535343-fe7d-4ae5-8fa9-9fafd205e455'  // Feasycom
+            ];
+
             if (!device) {
                 device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+                    optionalServices: serviciosOpcionales
                 });
             }
             const server = await device.gatt.connect();
-            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-            printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+            
+            // Buscar el servicio correcto entre los candidatos
+            let service;
+            let characteristic;
+            
+            // Mapeo de Servicio -> Característica de escritura
+            const candidatos = [
+                { s: '000018f0-0000-1000-8000-00805f9b34fb', c: '00002af1-0000-1000-8000-00805f9b34fb' },
+                { s: 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', c: 'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f' },
+                { s: '49535343-fe7d-4ae5-8fa9-9fafd205e455', c: '49535343-8841-43f4-a8d4-ecbe34729bb3' }
+            ];
+
+            for (const cand of candidatos) {
+                try {
+                    service = await server.getPrimaryService(cand.s);
+                    characteristic = await service.getCharacteristic(cand.c);
+                    if (service && characteristic) break; // ¡Encontrado!
+                } catch (e) { console.log("Probando servicio " + cand.s + "...", e); }
+            }
+
+            if (!characteristic) throw new Error("No se encontró un servicio de impresión compatible en este dispositivo.");
+
+            printCharacteristic = characteristic;
             bluetoothDevice = device;
-            alert("✅ ¡CONECTADO!\nAhora puedes imprimir las etiquetas de la cola.");
+            alert("✅ ¡CONECTADO!\nImpresora lista: " + device.name);
         } catch (error) {
             console.log("Error en Bluefy:", error);
             // Esta alerta te dirá exactamente por qué falló en el iPhone
