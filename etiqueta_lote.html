@@ -358,13 +358,15 @@
         try {
             // Enviar en trozos (Chunks) para evitar saturar el buffer de la impresora
             const encodedData = encoder.encode(cmd);
-            const CHUNK_SIZE = 50;
+            const CHUNK_SIZE = 20; // Reducido a 20 para estabilidad
             for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
                 await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
-                await new Promise(resolve => setTimeout(resolve, 20));
+                await new Promise(resolve => setTimeout(resolve, 50)); // Pausa aumentada
             }
+            alert("✅ Etiqueta de Lote enviada.");
         } catch (e) {
-            alert("Error enviando datos: " + e);
+            console.error(e);
+            alert("❌ Error enviando datos: " + e.message);
             printCharacteristic = null; // Resetear para reconectar la próxima vez
         }
     }

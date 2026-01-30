@@ -452,9 +452,10 @@
                 cmd += "PRINT 1,1\r\n";
 
                 const encodedData = encoder.encode(cmd);
-                for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
-                    await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
-                    await new Promise(resolve => setTimeout(resolve, 20));
+                const CHUNK_SIZE_SAFE = 20; // Usar 20 bytes para seguridad
+                for (let i = 0; i < encodedData.length; i += CHUNK_SIZE_SAFE) {
+                    await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE_SAFE));
+                    await new Promise(resolve => setTimeout(resolve, 50));
                 }
                 await new Promise(resolve => setTimeout(resolve, 500)); // Pausa entre etiquetas
             }

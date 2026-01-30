@@ -845,7 +845,7 @@
             // Usar la función compartida del archivo externo
             await imprimirEtiquetaTerminado(printCharacteristic, f);
         } catch (error) {
-            alert("Error enviando datos: " + error.message);
+            // El alert ya se mostró en la función compartida (si silent=false), pero reseteamos aquí
             printCharacteristic = null; // Resetear para forzar reconexión
         }
     }

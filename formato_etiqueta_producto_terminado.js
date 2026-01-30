@@ -2,7 +2,7 @@
  * Función compartida para imprimir etiquetas de Producto Terminado (4x3 pulgadas)
  * Se usa tanto en registro.html como en etiquetas_fardo.html
  */
-async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
+async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = false) {
     if (!printCharacteristic) {
         throw new Error("Impresora no conectada");
     }
@@ -86,13 +86,13 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
         }
 
         // Si llega aquí, es que terminó de enviar todo sin errores
-        alert("✅ Datos enviados. Imprimiendo...");
+        if (!silent) alert("✅ Datos enviados. Imprimiendo...");
 
     } catch (error) {
         console.error("Error de impresión:", error);
-        alert("❌ Error al imprimir: " + error.message);
+        if (!silent) alert("❌ Error al imprimir: " + error.message);
         
-        // Tip extra: Si falla, a veces es porque la conexión se cerró
-        printCharacteristic = null; 
+        // Re-lanzamos el error para que la función padre pueda manejar el estado (ej: poner printCharacteristic = null)
+        throw error;
     }
 }

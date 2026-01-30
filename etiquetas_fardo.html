@@ -483,16 +483,16 @@ async function conectarBluetooth() {
         if (!confirm(`¿Estás seguro de imprimir ${fardosDelLote.length} etiquetas? Asegúrate de tener papel.`)) return;
 
         for (const fardo of fardosDelLote) {
-            await enviarComandoEtiqueta(fardo);
+            await enviarComandoEtiqueta(fardo, true); // true = Modo silencioso
             // Pequeña pausa entre etiquetas para no saturar
             await new Promise(r => setTimeout(r, 500));
         }
         alert("✅ Impresión masiva finalizada.");
     }
 
-    async function enviarComandoEtiqueta(f) {
+    async function enviarComandoEtiqueta(f, silent = false) {
         // Usar la función compartida del archivo externo
-        await imprimirEtiquetaTerminado(printCharacteristic, f);
+        await imprimirEtiquetaTerminado(printCharacteristic, f, silent);
     }
 </script>
 
