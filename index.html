@@ -1235,6 +1235,62 @@
             const tfoot = document.getElementById('report-foot');
             tfoot.innerHTML = `<tr class="report-total-row text-white bg-emerald-900"><td colspan="2" class="px-4 py-3 text-right text-lg">TOTAL GENERAL PT</td>${largos.map(l => `<td class="px-2 py-3">${colTotals[l].toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`).join('')}<td class="px-2 py-3 bg-emerald-800">${grandSum35.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 bg-emerald-800">${grandSum67.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 bg-emerald-800">${grandSum8Plus.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 text-xl bg-emerald-950 text-yellow-400">${grandTotal.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>`;
         }
+
+        // --- LÓGICA DE LOGIN Y SALUDOS ---
+        function actualizarSaludoFijo(nombre) {
+            const hora = new Date().getHours();
+            let saludoBase = "";
+
+            if (hora >= 6 && hora < 12) {
+                saludoBase = "Buenos días";
+            } else if (hora >= 12 && hora < 18) {
+                saludoBase = "Buenas tardes";
+            } else {
+                saludoBase = "Buenas noches";
+            }
+
+            const textoCompleto = `${saludoBase}, ${nombre}`;
+            document.getElementById('user-greeting-mobile').innerText = textoCompleto;
+            document.getElementById('user-greeting-desktop').innerText = textoCompleto;
+        }
+
+        function intentarLogin() {
+            const user = document.getElementById('user-login').value;
+            const pass = document.getElementById('pass-login').value;
+            const errorMsg = document.getElementById('login-error');
+
+            if (user === "admin" && pass === "gibor2026") {
+                actualizarSaludoFijo("Michelle Giron");
+                configurarVista("admin");
+            } else if (user === "inventario" && pass === "inventario2026") {
+                actualizarSaludoFijo("Jose Corado");
+                configurarVista("inventario");
+            } else {
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+            document.getElementById('login-screen').classList.add('hidden');
+        }
+
+        function configurarVista(rol) {
+            const navItems = document.querySelectorAll('.nav-item');
+            const sections = document.querySelectorAll('.pt-6'); // Títulos de sección en sidebar
+
+            if (rol === "admin") {
+                navItems.forEach(item => {
+                    const spanText = item.querySelector('span').innerText.trim();
+                    // Solo permite ver "Inicio"
+                    if (spanText !== "Inicio") {
+                        item.style.display = 'none';
+                    }
+                });
+                sections.forEach(sec => sec.style.display = 'none');
+            } else {
+                // Usuario inventario ve todo
+                navItems.forEach(item => item.style.display = 'flex');
+                sections.forEach(sec => sec.style.display = 'block');
+            }
+        }
     </script>
 </body>
 </html>
