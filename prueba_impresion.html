@@ -96,14 +96,9 @@
             try {
                 writeLog("1. Abriendo selector de Bluetooth...");
                 
-                // Usamos filtros específicos, que son más estables en Bluefy/iOS
+                // Cambiamos a acceptAllDevices para forzar la aparición del diálogo de iOS
                 deviceGlobal = await navigator.bluetooth.requestDevice({
-                    filters: [
-                        { namePrefix: 'MHT' },
-                        { namePrefix: 'Printer' },
-                        { namePrefix: 'RT' },
-                        { namePrefix: 'Bluetooth' }
-                    ],
+                    acceptAllDevices: true,
                     optionalServices: [
                         '0000ff00-0000-1000-8000-00805f9b34fb', 
                         '000018f0-0000-1000-8000-00805f9b34fb',
