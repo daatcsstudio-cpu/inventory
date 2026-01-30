@@ -361,7 +361,7 @@
             const CHUNK_SIZE = 20; // Reducido a 20 para estabilidad
             for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
                 await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
-                await new Promise(resolve => setTimeout(resolve, 50)); // Pausa aumentada
+                await new Promise(resolve => setTimeout(resolve, 60)); // Pausa aumentada
             }
             alert("✅ Etiqueta de Lote enviada.");
         } catch (e) {
@@ -373,25 +373,35 @@
 
     async function conectarBluetooth() {
         const statusDiv = document.getElementById('status');
-        if(statusDiv) statusDiv.innerText = "⏳ Buscando impresora...";
+        if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
 
         try {
+            // Al usar acceptAllDevices, iOS mostrará la lista de dispositivos sí o sí
             bluetoothDevice = await navigator.bluetooth.requestDevice({
-                filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }],
+                acceptAllDevices: true,
                 optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
             });
             
-            if(statusDiv) statusDiv.innerText = "🔗 Conectando...";
-            const server = await bluetoothDevice.gatt.connect();
+            if(statusDiv) statusDiv.innerText = "🔗 Sincronizando con " + bluetoothDevice.name;
             
+            const server = await bluetoothDevice.gatt.connect();
             const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
             printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
             
-            if(statusDiv) { statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; statusDiv.style.color = "green"; }
-            alert("✅ ¡CONECTADO! Ya puedes imprimir.");
+            if(statusDiv) { 
+                statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; 
+                statusDiv.style.color = "green"; 
+            }
+            alert("✅ ¡CONECTADO!\nAhora puedes imprimir las etiquetas de la cola.");
+
         } catch (error) {
-            if(statusDiv) { statusDiv.innerText = "❌ Error conexión"; statusDiv.style.color = "red"; }
-            alert("⚠️ Conexión cancelada o fallida: " + error.message);
+            console.log("Error en Bluefy:", error);
+            if(statusDiv) { 
+                statusDiv.innerText = "❌ Error de conexión"; 
+                statusDiv.style.color = "red"; 
+            }
+            // Esta alerta te dirá exactamente por qué falló en el iPhone
+            alert("⚠️ No se pudo conectar: " + error.message);
         }
     }
 </script>

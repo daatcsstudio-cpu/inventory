@@ -82,7 +82,7 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
 
         for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
             await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 60));
         }
 
         // Si llega aquí, es que terminó de enviar todo sin errores

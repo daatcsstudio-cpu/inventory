@@ -814,20 +814,36 @@
 
     // --- Lógica Bluetooth (Web Bluetooth API) ---
     async function conectarBluetooth() {
+        const statusDiv = document.getElementById('status');
+        if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
+
         try {
+            // Al usar acceptAllDevices, iOS mostrará la lista de dispositivos sí o sí
             bluetoothDevice = await navigator.bluetooth.requestDevice({
-                filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }],
+                acceptAllDevices: true,
                 optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
             });
             
-            const server = await bluetoothDevice.gatt.connect();
+            if(statusDiv) statusDiv.innerText = "🔗 Sincronizando con " + bluetoothDevice.name;
             
+            const server = await bluetoothDevice.gatt.connect();
             const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
             printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
             
-            alert("✅ ¡CONECTADO! Ya puedes imprimir.");
+            if(statusDiv) { 
+                statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; 
+                statusDiv.style.color = "green"; 
+            }
+            alert("✅ ¡CONECTADO!\nAhora puedes imprimir las etiquetas de la cola.");
+
         } catch (error) {
-            alert("⚠️ Conexión cancelada o fallida: " + error.message);
+            console.log("Error en Bluefy:", error);
+            if(statusDiv) { 
+                statusDiv.innerText = "❌ Error de conexión"; 
+                statusDiv.style.color = "red"; 
+            }
+            // Esta alerta te dirá exactamente por qué falló en el iPhone
+            alert("⚠️ No se pudo conectar: " + error.message);
         }
     }
 
