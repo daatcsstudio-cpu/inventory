@@ -507,131 +507,108 @@
     }
 
     function agregarFardo() {
-        try {
-            // 1. Auto-agregar línea pendiente si el usuario olvidó darle al "+"
-            const pzsInput = document.getElementById('newPiezas');
-            const largoInput = document.getElementById('newLargo');
-            if (pzsInput.value && largoInput.value) {
-                agregarLinea();
+        // 1. Auto-agregar línea pendiente si el usuario olvidó darle al "+"
+        const pzsInput = document.getElementById('newPiezas');
+        const largoInput = document.getElementById('newLargo');
+        if (pzsInput.value && largoInput.value) {
+            agregarLinea();
+        }
+
+        if (currentDetalles.length === 0) {
+            alert("Debes agregar al menos una línea de detalle (Piezas/Largo)");
+            return;
+        }
+
+        const producto = document.getElementById('producto').value;
+        const anchoGlobal = parseFloat(document.getElementById('ancho').value) || 0;
+        const grosorStr = document.getElementById('grosor').value;
+        const lote = document.getElementById('loteId').value;
+        const fardoNo = document.getElementById('fardoNo').value;
+
+        if(!lote || !fardoNo) {
+            alert("Por favor llena el Lote y el No. de Fardo");
+            return;
+        }
+
+        if (verificarDuplicado(lote, fardoNo, producto)) {
+            alert("⚠️ EL FARDO #" + fardoNo + " YA EXISTE (en local o en la base de datos) para este Lote y Producto.");
+            return;
+        }
+
+        const parseFraction = (str) => {
+            if (!str) return 0;
+            if (String(str).includes('/')) {
+                const parts = str.split('/');
+                return parseInt(parts[0]) / parseInt(parts[1]);
             }
+            return parseFloat(str);
+        };
+        const grosorVal = parseFraction(grosorStr);
+        const unidad = (producto === 'Tranquilla') ? 'ml' : 'm2';
 
-            if (currentDetalles.length === 0) {
-                alert("Debes agregar al menos una línea de detalle (Piezas/Largo)");
-                return;
-            }
+        // Objeto para guardar en el historial local (con totales)
+        const fardoParaHistorial = {
+            lote: lote, fardoNo: fardoNo, producto: producto, grosor: grosorStr, ancho: anchoGlobal,
+            especie: document.getElementById('especie').value, detalles: [...currentDetalles],
+            m2: 0, p2: 0, m3: 0, unidad: unidad
+        };
 
-            const producto = document.getElementById('producto').value;
-            const anchoGlobal = parseFloat(document.getElementById('ancho').value) || 0;
+        let totalMetrosFardo = 0, totalP2Fardo = 0, totalM3Fardo = 0;
 
-            // Calcular M2 o ML Total
-            let totalMetros = 0;
-            let unidad = 'm2';
-
-            if (producto === 'Tranquilla') {
-                unidad = 'ml';
-                currentDetalles.forEach(d => {
-                    // Metros lineales: Piezas * (Largo en ft a m)
-                    totalMetros += d.piezas * (d.largo * 0.3048);
-                });
-            } else {
-                unidad = 'm2';
-                currentDetalles.forEach(d => {
-                    // Metros cuadrados: Piezas * (Largo en m) * (Ancho en m)
-                    totalMetros += d.piezas * (d.largo * 0.3048) * (anchoGlobal * 0.0254);
-                });
-            }
-
-            // --- CÁLCULOS ADICIONALES (P2 y M3) ---
-            // Helper para convertir fracción (ej: 3/4) a decimal
-            const parseFraction = (str) => {
-                if (!str) return 0;
-                if (String(str).includes('/')) {
-                    const parts = str.split('/');
-                    return parseInt(parts[0]) / parseInt(parts[1]);
-                }
-                return parseFloat(str);
-            };
-
-            const grosorVal = parseFraction(document.getElementById('grosor').value);
-            // Si es ML, convertimos a M2 real para el cálculo de volumen. Si es M2, ya lo tenemos.
-            const m2Real = (unidad === 'ml') ? totalMetros * (anchoGlobal * 0.0254) : totalMetros;
+        // Procesar y enviar cada línea de detalle a la base de datos
+        currentDetalles.forEach(d => {
+            const piezas = d.piezas;
+            const largo = d.largo;
             
-            const m3 = parseFloat((m2Real * (grosorVal * 0.0254)).toFixed(4)); // M2 * Grosor(m)
-            const p2 = parseFloat((m2Real * 10.7639).toFixed(2)); // M2 * 10.7639
+            const m2_linea = (unidad === 'm2') ? piezas * (largo * 0.3048) * (anchoGlobal * 0.0254) : 0;
+            const ml_linea = (unidad === 'ml') ? piezas * (largo * 0.3048) : 0;
+            
+            const m2Real_linea = (unidad === 'ml') ? ml_linea * (anchoGlobal * 0.0254) : m2_linea;
+            const p2_linea = m2Real_linea * 10.7639;
+            const m3_linea = m2Real_linea * (grosorVal * 0.0254);
 
-            const fardo = {
-                lote: document.getElementById('loteId').value,
-                fardoNo: document.getElementById('fardoNo').value,
-                producto: producto,
-                grosor: document.getElementById('grosor').value,
-                ancho: anchoGlobal,
-                especie: document.getElementById('especie').value,
-                detalles: [...currentDetalles], // Copia del array
-                m2: parseFloat(totalMetros.toFixed(2)), // Número puro (ej: 12.5) para que Sheets use su formato
-                p2: p2,
-                m3: m3,
+            const payloadDeFila = {
+                lote: lote, fardoNo: fardoNo, producto: producto,
+                grosor: String(grosorStr).includes('/') ? "'" + grosorStr : grosorStr,
+                ancho: anchoGlobal, especie: document.getElementById('especie').value,
+                piezas: piezas, largo: largo,
+                m2: parseFloat(m2_linea.toFixed(3)), ml: parseFloat(ml_linea.toFixed(2)),
+                p2: parseFloat(p2_linea.toFixed(2)), m3: parseFloat(m3_linea.toFixed(4)),
                 unidad: unidad
             };
 
-            if(!fardo.lote || !fardo.fardoNo) {
-                alert("Por favor llena el Lote y el No. de Fardo");
-                return;
-            }
+            fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payloadDeFila) })
+                .catch(err => console.error("Error enviando fila a Sheets: " + err));
 
-            if (verificarDuplicado(fardo.lote, fardo.fardoNo, fardo.producto)) {
-                alert("⚠️ EL FARDO #" + fardo.fardoNo + " YA EXISTE (en local o en la base de datos) para este Lote y Producto.");
-                return;
-            }
+            // Acumular totales para el historial local
+            totalMetrosFardo += (unidad === 'ml') ? ml_linea : m2_linea;
+            totalP2Fardo += p2_linea;
+            totalM3Fardo += m3_linea;
+        });
 
-            // --- SINCRONIZACIÓN CON GOOGLE SHEETS ---
-            // Preparamos un payload seguro para evitar que Sheets convierta fracciones a fechas
-            // Solución al error de filas mixtas (Fecha/Texto)
-            const payload = { ...fardo };
-            if (String(payload.grosor).includes('/')) {
-                payload.grosor = "'" + payload.grosor;
-            }
+        // Finalizar el objeto para el historial local
+        fardoParaHistorial.m2 = parseFloat(totalMetrosFardo.toFixed(2));
+        fardoParaHistorial.p2 = parseFloat(totalP2Fardo.toFixed(2));
+        fardoParaHistorial.m3 = parseFloat(totalM3Fardo.toFixed(4));
 
-            // Enviar el objeto fardo completo.
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify(payload)
-            })
-            .then(res => console.log("Enviado a Sheets"))
-            .catch(err => console.error("Error enviando a Sheets: " + err));
-
-            fardosData.push(fardo);
-            
-            // Guardar en memoria local (Protegido)
-            try { guardarDatosLocales(); } catch(e) { console.error("Error guardando local", e); }
-            
-            // Resetear detalles
-            currentDetalles = [];
-            renderDetalles();
-            
-            // Auto-incrementar Fardo No.
-            const inputFardo = document.getElementById('fardoNo');
-            const nextFardo = parseInt(inputFardo.value) + 1;
-            if (!isNaN(nextFardo)) inputFardo.value = nextFardo;
-            
-            localStorage.setItem('last_lote', document.getElementById('loteId').value);
-            localStorage.setItem('last_fardo', inputFardo.value);
-            
-            // Intentar imprimir (protegido contra errores para no detener el flujo)
-            if (autoPrint) {
-                try {
-                    if (printCharacteristic) {
-                        imprimirBluetooth(fardosData.length - 1, true); // Impresión silenciosa si hay BT
-                    } else {
-                        imprimir(fardosData.length - 1); 
-                    }
-                } catch(e) {
-                    console.error("Error al imprimir:", e);
-                }
-            }
-        } catch (error) {
-            alert("Error CRÍTICO al guardar fardo: " + error.message);
-            console.error(error);
+        // Actualizar UI y estado local
+        fardosData.push(fardoParaHistorial);
+        guardarDatosLocales();
+        
+        currentDetalles = [];
+        renderDetalles();
+        
+        const inputFardo = document.getElementById('fardoNo');
+        const nextFardo = parseInt(inputFardo.value) + 1;
+        if (!isNaN(nextFardo)) inputFardo.value = nextFardo;
+        
+        localStorage.setItem('last_lote', lote);
+        localStorage.setItem('last_fardo', inputFardo.value);
+        
+        if (autoPrint) {
+            imprimirBluetooth(fardosData.length - 1, true);
         }
+        actualizarLista();
     }
 
     function guardarDatosLocales() {
