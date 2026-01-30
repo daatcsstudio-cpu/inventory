@@ -7,11 +7,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    
+    <!-- ⚠️ IMPORTANTE: Cargar el archivo de formato de etiqueta ANTES del script principal -->
+    <script src="./formato_etiqueta_producto_terminado.js"></script>
+    
     <style>
         :root {
-            --primary: #1A237E; /* Azul Marino Ticket */
-            --accent: #1A237E;  /* Unificamos acento al azul */
-            --bg: #F5F7F9;      /* Fondo Gris Claro */
+            --primary: #1A237E;
+            --accent: #1A237E;
+            --bg: #F5F7F9;
             --text-dark: #2c3e50;
             --text-gray: #95a5a6;
         }
@@ -19,7 +23,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
             margin: 0;
-            padding: 10px; /* Padding reducido para ganar espacio */
+            padding: 10px;
             color: var(--text-dark);
         }
         .container { max-width: 100%; }
@@ -27,16 +31,16 @@
         
         .card {
             background: white;
-            padding: 12px; /* Compacto */
-            border-radius: 16px; /* Bordes redondeados estilo Ticket */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); /* Sombra sutil */
+            padding: 12px;
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             margin-bottom: 15px;
         }
 
         label { display: block; margin-top: 8px; font-weight: 700; font-size: 0.8rem; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.5px; }
         input, select {
             width: 100%;
-            padding: 10px; /* Ligeramente más compacto */
+            padding: 10px;
             margin-top: 4px;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
@@ -72,7 +76,6 @@
         .btn-print { background-color: #fff; border: 2px solid var(--primary); color: var(--primary); }
         .btn-bt { background-color: #e0e6ed; color: var(--text-dark); margin-bottom: 10px; box-shadow: none; }
 
-        /* Estilo de la Etiqueta para Impresión */
         #label-template {
             display: none;
             width: 100mm;
@@ -98,7 +101,6 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
         
-        /* Estilos para la tabla de detalles */
         .detail-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .detail-table th { background: #f8f9fa; padding: 6px; font-size: 0.75rem; text-align: left; color: var(--text-gray); text-transform: uppercase; }
         .detail-table td { padding: 6px; border-bottom: 1px solid #f0f0f0; }
@@ -106,7 +108,6 @@
         .btn-small { padding: 6px 10px; margin: 0; width: auto; background: var(--primary); color: white; border-radius: 6px; font-size: 0.8rem; }
         .btn-del { background: #ff5252; color: white; width: auto; padding: 6px 10px; margin: 0; border-radius: 6px; }
 
-        /* Estilo de la Etiqueta para Impresión (4x3 pulgadas) */
         #label-template {
             display: none;
             background: white;
@@ -131,24 +132,22 @@
                 display: flex; flex-direction: column;
                 padding: 5px 10px;
                 border: none;
-                overflow: hidden; /* Evita que el contenido salte a una segunda página */
+                overflow: hidden;
                 align-items: center;
                 text-align: center;
             }
-            /* Ajustes de fuente para etiqueta pequeña */
             #printFardo, #printM2 { font-size: 1.4rem !important; }
             #printProducto { font-size: 1.1rem !important; }
             .print-col-header { border-bottom: 1px solid #000; margin-bottom: 2px; font-size: 0.9rem; }
             .print-val { font-size: 1rem; }
         }
 
-        /* Estilos para Slider Horizontal (Páginas) */
         .slider-container {
             display: flex;
             overflow-x: auto;
             scroll-snap-type: x mandatory;
             -webkit-overflow-scrolling: touch;
-            scrollbar-width: none; /* Firefox */
+            scrollbar-width: none;
             gap: 10px;
             padding-bottom: 5px;
         }
@@ -158,7 +157,7 @@
             min-width: 100%;
             scroll-snap-align: center;
             display: grid;
-            grid-template-columns: repeat(4, 1fr); /* 4 botones por fila */
+            grid-template-columns: repeat(4, 1fr);
             grid-auto-rows: min-content;
             gap: 8px;
         }
@@ -172,7 +171,7 @@
             font-weight: bold;
             color: var(--text-dark);
             cursor: pointer;
-            user-select: none; /* Evita zoom/selección al tocar rápido */
+            user-select: none;
             touch-action: manipulation;
         }
         .quick-btn.active { background-color: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 8px rgba(26, 35, 126, 0.2); }
@@ -230,7 +229,6 @@
 
         <hr>
         
-        <!-- PANEL TÁCTIL (Sin Teclado) -->
         <div style="margin-bottom: 15px;">
             <label style="color:var(--primary);">1. Selecciona Piezas (Desliza ↔):</label>
             <div id="quick-piezas" class="slider-container"></div>
@@ -241,7 +239,6 @@
 
         <hr>
 
-        <!-- Entrada Rápida -->
         <div style="background: #f0f4f8; padding: 10px; border-radius: 12px; margin-bottom: 10px;">
             <label style="margin-top:0; color: var(--primary);">AGREGAR PIEZAS (Enter para agregar)</label>
             <div style="display: flex; gap: 5px; align-items: center;">
@@ -261,7 +258,6 @@
                 </tr>
             </thead>
             <tbody id="tablaDetallesBody">
-                <!-- Filas dinámicas -->
             </tbody>
         </table>
         
@@ -276,7 +272,6 @@
 </div>
 
 <div id="label-template">
-    <!-- Código de Barras -->
     <svg id="barcode"></svg>
     
     <div id="printLote" style="font-weight:bold; font-size: 1.1rem; margin-top: 2px;">Lote: ---</div>
@@ -308,33 +303,31 @@
     let currentDetalles = [];
     let bluetoothDevice;
     let printCharacteristic;
-    let selectedPiezas = 1; // Valor por defecto para botones rápidos
-    let autoPrint = true; // Estado inicial de impresión automática
+    let selectedPiezas = 1;
+    let autoPrint = true;
 
     function handleProductChange() {
-        // El ancho ahora es necesario para todos los productos
         const anchoInput = document.getElementById('ancho');
         if(anchoInput.value === "0") anchoInput.value = "5"; 
     }
 
-    // Cargar datos guardados al iniciar la página
     window.onload = function() {
+        // ⚠️ VERIFICACIÓN CRÍTICA: Comprobar que la función compartida existe
         if (typeof imprimirEtiquetaTerminado === 'undefined') {
-            alert("⚠️ ERROR CRÍTICO: No se cargó el archivo 'formato_etiqueta_producto_terminado.js'. Verifica tu conexión a internet o que el archivo exista.");
+            alert("⚠️ ERROR CRÍTICO: No se cargó 'formato_etiqueta_producto_terminado.js'\n\nVerifica:\n1. Que el archivo existe en la misma carpeta\n2. Conexión a internet (si usas CDN)\n3. Orden de carga de scripts");
+            console.error("FALTA: imprimirEtiquetaTerminado()");
         }
 
         const guardado = localStorage.getItem('inventario_fardos');
         if (guardado) {
             fardosData = JSON.parse(guardado);
         }
-        // Recuperar último lote y número de fardo
+        
         if(localStorage.getItem('last_lote')) document.getElementById('loteId').value = localStorage.getItem('last_lote');
         if(localStorage.getItem('last_fardo')) document.getElementById('fardoNo').value = localStorage.getItem('last_fardo');
         
-        // Eventos para entrada rápida con Enter
         document.getElementById('newPiezas').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
-                // Si el campo está vacío y ya hay detalles, Guardar Fardo (Funcionalidad de Doble Enter)
                 if (this.value.trim() === "" && currentDetalles.length > 0) {
                     agregarFardo();
                 } else {
@@ -349,12 +342,9 @@
 
         renderQuickButtons();
         handleProductChange();
-        
-        // Cargar base de datos remota y configurar listener de Lote
         cargarInventarioRemoto();
         document.getElementById('loteId').addEventListener('input', actualizarLista);
         
-        // Intentar reconexión automática (Chrome/Bluefy)
         if (navigator.bluetooth && navigator.bluetooth.getDevices) {
             navigator.bluetooth.getDevices().then(devices => {
                 const myPrinter = devices.find(d => d.name.includes('MTH') || d.name.includes('Printer'));
@@ -372,7 +362,6 @@
             });
         }
 
-        // Render inicial
         actualizarLista();
     };
 
@@ -381,11 +370,11 @@
         const btn = document.getElementById('btnAutoPrint');
         if(autoPrint) {
             btn.innerText = "🖨️ Auto: ON";
-            btn.style.backgroundColor = "#2ecc71"; // Verde
+            btn.style.backgroundColor = "#2ecc71";
             btn.style.color = "white";
         } else {
             btn.innerText = "🖨️ Auto: OFF";
-            btn.style.backgroundColor = "#95a5a6"; // Gris
+            btn.style.backgroundColor = "#95a5a6";
             btn.style.color = "white";
         }
     }
@@ -396,7 +385,7 @@
         .then(data => {
             inventarioRemoto = data;
             console.log("Inventario remoto cargado: " + data.length + " fardos.");
-            actualizarLista(); // Actualizar lista por si ya hay un lote escrito
+            actualizarLista();
         })
         .catch(error => {
             console.error("Error cargando inventario remoto:", error);
@@ -404,7 +393,6 @@
     }
 
     function renderQuickButtons() {
-        // Piezas: 1 a 12 (Páginas de 4)
         const piezasItems = [];
         for(let i=1; i<=12; i++) {
             piezasItems.push({ label: i, value: i, active: i === selectedPiezas });
@@ -413,12 +401,10 @@
         createSlider('quick-piezas', piezasItems, 4, (val, btn) => {
             selectedPiezas = val;
             document.getElementById('newPiezas').value = val;
-            // Actualizar visualmente
             document.querySelectorAll('#quick-piezas .quick-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
         });
 
-        // Largos: 1 a 7 con incrementos de 0.25 (Páginas de 8)
         const largosItems = [];
         for(let k=4; k<=28; k++) {
             let val = k / 4;
@@ -430,7 +416,6 @@
             document.getElementById('newPiezas').value = selectedPiezas;
             agregarLinea(true);
             
-            // Feedback visual al tocar
             const originalBg = btn.style.backgroundColor;
             btn.style.backgroundColor = '#1A237E';
             btn.style.color = 'white';
@@ -476,15 +461,12 @@
             largo: parseFloat(largo)
         });
 
-        // Limpiar inputs
         document.getElementById('newPiezas').value = '';
         document.getElementById('newLargo').value = '';
         
-        // Solo poner foco (abrir teclado) si NO viene de los botones rápidos
         if (!fromQuickButton) {
             document.getElementById('newPiezas').focus();
         } else {
-            // Si viene de botón rápido, restaurar el valor visual de piezas seleccionado
             document.getElementById('newPiezas').value = selectedPiezas;
         }
 
@@ -511,7 +493,6 @@
     }
 
     function agregarFardo() {
-        // 1. Auto-agregar línea pendiente si el usuario olvidó darle al "+"
         const pzsInput = document.getElementById('newPiezas');
         const largoInput = document.getElementById('newLargo');
         if (pzsInput.value && largoInput.value) {
@@ -561,7 +542,6 @@
             const p2_linea = m2Real_linea * 10.7639;
             const m3_linea = m2Real_linea * (grosorVal * 0.0254);
 
-            // Objeto plano para cada fila en la hoja de cálculo
             filasParaEnviar.push({
                 lote: lote,
                 fardoNo: fardoNo,
@@ -576,24 +556,20 @@
                 unidad: unidad
             });
 
-            // Acumular totales para el objeto de historial local
             totalMetrosFardo += (unidad === 'ml') ? ml_linea : m2_linea;
             totalP2Fardo += p2_linea;
             totalM3Fardo += m3_linea;
         });
 
-        // Payload para enviar a Google Apps Script
         const payload = {
-            sheetName: "PRODUCTO TERMINADO", // Asegurar destino
+            sheetName: "PRODUCTO TERMINADO",
             filas: filasParaEnviar
         };
 
-        // Enviar un solo objeto (más estable)
         fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
             .then(res => console.log("Enviado a Sheets"))
             .catch(err => console.error("Error enviando a Sheets: " + err));
 
-        // Objeto para el historial local (UI)
         const fardoParaHistorial = {
             lote: lote, fardoNo: fardoNo, producto: producto, grosor: grosorStr, ancho: anchoGlobal,
             especie: document.getElementById('especie').value, detalles: [...currentDetalles],
@@ -616,6 +592,7 @@
         localStorage.setItem('last_lote', lote);
         localStorage.setItem('last_fardo', inputFardo.value);
         
+        // ⚠️ CORRECCIÓN: Usar la función compartida para imprimir
         if (autoPrint) {
             imprimirBluetooth(fardosData.length - 1, true);
         }
@@ -627,13 +604,11 @@
     }
 
     function verificarDuplicado(lote, fardo, producto) {
-        // 1. Verificar en sesión local
         const enLocal = fardosData.some(f => 
             String(f.lote) === String(lote) && 
             String(f.fardoNo) === String(fardo) && 
             String(f.producto) === String(producto)
         );
-        // 2. Verificar en base de datos remota
         const enRemoto = inventarioRemoto.some(f => 
             String(f['# Lote']) === String(lote) && 
             String(f['# Fardo']) === String(fardo) && 
@@ -650,11 +625,9 @@
 
         lista.innerHTML = "";
         
-        // Filtrar Locales y Remotos por Lote
         const locales = fardosData.filter(f => String(f.lote) === String(loteActual));
         const remotos = inventarioRemoto.filter(f => String(f['# Lote']) === String(loteActual));
 
-        // Calcular totales combinados
         let totalMetros = 0;
         let count = 0;
         let unidadLote = 'm²';
@@ -674,7 +647,6 @@
             displayLote.innerText = "---";
         }
         
-        // 1. Mostrar Fardos Remotos (Base de Datos) - Solo lectura
         remotos.forEach(f => {
             const unidadRemota = (f['Unidad'] || 'm2') === 'ml' ? 'ml' : 'm²';
             const item = document.createElement('div');
@@ -688,9 +660,7 @@
             lista.appendChild(item);
         });
 
-        // 2. Mostrar Fardos Locales (Sesión actual) - Editables
         fardosData.forEach((f, index) => {
-            // Solo mostrar si coincide con el lote actual
             if (String(f.lote) !== String(loteActual)) return;
 
             const totalPiezas = f.detalles.reduce((acc, d) => acc + d.piezas, 0);
@@ -724,7 +694,6 @@
 
         const f = fardosData[index];
         
-        // Cargar datos en los inputs
         document.getElementById('loteId').value = f.lote;
         document.getElementById('fardoNo').value = f.fardoNo;
         document.getElementById('producto').value = f.producto;
@@ -732,20 +701,14 @@
         document.getElementById('ancho').value = f.ancho;
         document.getElementById('especie').value = f.especie;
         
-        // Cargar detalles
         currentDetalles = [...f.detalles];
         renderDetalles();
 
-        // Actualizar UI para el producto
         handleProductChange();
         
-        // Eliminar de la lista (para que al guardar no se duplique)
         fardosData.splice(index, 1);
         guardarDatosLocales();
 
-        // --- CORRECCIÓN PARA PERMITIR EDICIÓN ---
-        // Eliminamos temporalmente este fardo de la memoria de "inventarioRemoto"
-        // para que la validación de duplicados no bloquee el guardado.
         const remoteIndex = inventarioRemoto.findIndex(r => 
             String(r['# Lote']) === String(f.lote) && 
             String(r['# Fardo']) === String(f.fardoNo)
@@ -756,12 +719,10 @@
 
         actualizarLista();
         
-        // Scroll hacia arriba para editar
         document.querySelector('.container').scrollIntoView({behavior: 'smooth'});
     }
 
     function prepararEtiqueta(f) {
-        // Generar Código de Barras
         if (typeof JsBarcode !== 'undefined') {
             try {
                 JsBarcode("#barcode", f.fardoNo, {
@@ -781,26 +742,21 @@
         document.getElementById('printProducto').innerText = `${f.producto} ${f.grosor} x ${f.ancho}"`;
         document.getElementById('printEspecie').innerText = "Especie: " + f.especie;
         
-        // Llenar tabla de impresión
         const colPiezas = document.getElementById('printPiezasCol');
         const colLargos = document.getElementById('printLargosCol');
         
-        // Limpiar contenido previo
         colPiezas.innerHTML = "";
         colLargos.innerHTML = "";
 
         f.detalles.forEach(d => {
             const pDiv = document.createElement('div');
             pDiv.className = 'print-val';
-            // pDiv.className = 'print-val'; // Ya no se usa clase, hereda de lbl-td
             pDiv.innerText = d.piezas;
             colPiezas.appendChild(pDiv);
 
             const lDiv = document.createElement('div');
             lDiv.className = 'print-val';
-            lDiv.innerText = `${d.largo}'`;
-            // lDiv.className = 'print-val';
-            lDiv.innerText = d.largo; // Sin comilla, solo numero
+            lDiv.innerText = d.largo;
             colLargos.appendChild(lDiv);
         });
     }
@@ -817,7 +773,6 @@
         
         const label = document.getElementById('label-template');
         
-        // Mostrar temporalmente para la captura con estilos correctos
         label.style.display = 'flex';
         label.style.position = 'fixed';
         label.style.zIndex = '9999';
@@ -825,18 +780,16 @@
         label.style.left = '0';
         
         html2canvas(label, { scale: 2 }).then(canvas => {
-            label.style.display = 'none'; // Ocultar
+            label.style.display = 'none';
             
             canvas.toBlob(function(blob) {
                 const file = new File([blob], `Fardo_${f.fardoNo}.png`, { type: "image/png" });
 
-                // Intentar usar el menú nativo de compartir (iPhone/Android)
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     navigator.share({
                         files: [file]
                     }).catch(e => console.log("Compartir cancelado o fallido", e));
                 } else {
-                    // Fallback: Descarga directa si no soporta compartir
                     const link = document.createElement('a');
                     link.download = `Fardo_${f.fardoNo}.png`;
                     link.href = canvas.toDataURL("image/png");
@@ -849,7 +802,6 @@
     function exportarExcel() {
         if(fardosData.length === 0) return alert("No hay datos para exportar");
         
-        // Aplanar datos para Excel
         let flatData = [];
         fardosData.forEach(f => {
             f.detalles.forEach(d => {
@@ -872,110 +824,86 @@
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Inventario");
         
-        // Genera el archivo y lo descarga
         XLSX.writeFile(workbook, `Inventario_Lote_${fardosData[0].lote}.xlsx`);
     }
 
-    // --- Lógica Bluetooth (Web Bluetooth API) ---
+    // ⚠️ FUNCIÓN CORREGIDA: Conectar Bluetooth con mejor compatibilidad
     async function conectarBluetooth() {
-        const statusDiv = document.getElementById('status');
-        if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
         try {
-            let device;
+            console.log("🔍 Buscando impresoras Bluetooth...");
             
-            // Lista de servicios comunes para impresoras térmicas (Estándar, Chinas, Feasycom)
             const serviciosOpcionales = [
-                '000018f0-0000-1000-8000-00805f9b34fb', // Estándar TSPL
-                'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Impresoras Chinas / MPT-II
+                '000018f0-0000-1000-8000-00805f9b34fb', // TSPL Estándar
+                'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // MPT-II / Chinas
                 '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Feasycom
-                '0000ff00-0000-1000-8000-00805f9b34fb', // Meihengtong / MHT
-                '734e665b-eb21-4061-bdb3-2d55ce395bbe'  // Tu UUID específico
+                '0000ff00-0000-1000-8000-00805f9b34fb'  // MHT
             ];
 
-            if (!device) {
-                device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: serviciosOpcionales
-                });
-            }
+            const device = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: serviciosOpcionales
+            });
+
+            console.log("📱 Dispositivo seleccionado:", device.name);
             const server = await device.gatt.connect();
+            console.log("🔗 Conectado al servidor GATT");
             
-            // Buscar el servicio correcto entre los candidatos
-            let characteristic;
+            let characteristic = null;
             
-            // Iterar sobre los servicios permitidos para encontrar uno activo
+            // Intentar cada servicio hasta encontrar uno que funcione
             for (const sUuid of serviciosOpcionales) {
                 try {
                     const service = await server.getPrimaryService(sUuid);
                     const characteristics = await service.getCharacteristics();
-                    // Buscar cualquier característica que permita escribir
                     characteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
-                    if (characteristic) break;
-                } catch (e) { /* Servicio no encontrado, probar siguiente */ }
+                    if (characteristic) {
+                        console.log(`✅ Característica encontrada en servicio: ${sUuid}`);
+                        break;
+                    }
+                } catch (e) {
+                    console.log(`⚠️ Servicio ${sUuid} no disponible`);
+                }
             }
 
-            if (!characteristic) throw new Error("No se encontró un servicio de impresión compatible en este dispositivo.");
+            if (!characteristic) {
+                throw new Error("No se encontró una característica de escritura compatible");
+            }
 
             printCharacteristic = characteristic;
             bluetoothDevice = device;
-            alert("✅ ¡CONECTADO!\nImpresora lista: " + device.name);
+            
+            alert("✅ CONECTADO!\nImpresora: " + device.name);
+            
         } catch (error) {
-            console.log("Error en Bluefy:", error);
-            // Esta alerta te dirá exactamente por qué falló en el iPhone
-            alert("⚠️ No se pudo conectar: " + error.message);
+            console.error("❌ Error de conexión:", error);
+            alert("⚠️ Error al conectar:\n" + error.message + "\n\nVerifica:\n• Bluetooth activado\n• Impresora encendida\n• Permisos otorgados");
         }
     }
 
+    // ⚠️ NUEVA FUNCIÓN: Usar la función compartida del archivo externo
     async function imprimirBluetooth(index, silent = false) {
-        if (!printCharacteristic) { await conectarBluetooth(); if (!printCharacteristic) return; }
-        
-        const f = fardosData[index];
-        const unidad = f.unidad || 'm2';
-        const unidadDisplay = unidad === 'ml' ? 'ML' : 'M2';
-        
-        const encoder = new TextEncoder();
-        let cmd = "SIZE 4,3\r\nGAP 0.12,0\r\nDIRECTION 1\r\nCLS\r\nDENSITY 8\r\n";
-        
-        cmd += `BARCODE 60,20,"128",60,1,0,3,3,"${f.fardoNo}"\r\n`;
-        cmd += `TEXT 300,125,"3",0,1,1,2,"Lote: ${f.lote}"\r\n`;
-        cmd += `TEXT 350,45,"3",0,1,1,2,"Fardo: ${f.fardoNo}  -  ${f.m2} ${unidadDisplay}"\r\n`;
-        cmd += `BAR 40,155,720,2\r\n`;
-        cmd += `TEXT 266,175,"3",0,1,1,2,"${f.producto}"\r\n`;
-        cmd += `TEXT 206,210,"3",0,1,1,2,"${f.grosor} x ${f.ancho} pulg  -  ${f.especie}"\r\n`;
-        cmd += `BAR 40,240,720,2\r\n`;
-        cmd += `TEXT 60,260,"3",0,1,1,"LARGO"\r\n`;
-        cmd += `TEXT 314,260,"3",0,1,1,"PIEZAS"\r\n`;
-        cmd += `TEXT 650,260,"3",0,1,1,"${unidadDisplay}"\r\n`;
-
-        let y = 290;
-        if (f.detalles && f.detalles.length > 0) {
-            f.detalles.forEach(d => {
-                if (y < 500) {
-                    const metros_linea = (unidad === 'ml')
-                        ? d.piezas * (d.largo * 0.3048)
-                        : d.piezas * (d.largo * 0.3048) * (f.ancho * 0.0254);
-                    
-                    cmd += `TEXT 60,${y},"3",0,1,1,"${d.largo}"\r\n`;
-                    cmd += `TEXT 350,${y},"3",0,1,1,"${d.piezas}"\r\n`;
-                    cmd += `TEXT 650,${y},"3",0,1,1,"${metros_linea.toFixed(2)}"\r\n`;
-                    y += 35;
-                }
-            });
+        if (!printCharacteristic) {
+            if (!silent) alert("⚠️ Primero debes conectar la impresora Bluetooth");
+            await conectarBluetooth();
+            if (!printCharacteristic) return; // Si aún no conectó, salir
         }
 
-        cmd += `BAR 40,510,720,2\r\n`;
-        const totalPzs = f.detalles ? f.detalles.reduce((acc, d) => acc + d.piezas, 0) : 0;
-        cmd += `TEXT 158,540,"3",0,1,1,"TOTAL PIEZAS: ${totalPzs}"\r\n`;
-        cmd += `TEXT 532,540,"3",0,1,1,3,"TOTAL: ${f.m2} ${unidadDisplay}"\r\n`;
-        cmd += "PRINT 1,1\r\n";
-
-        const encodedData = encoder.encode(cmd);
-        const CHUNK_SIZE = 20;
-        for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
-            await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
-            await new Promise(r => setTimeout(r, 50));
+        const fardo = fardosData[index];
+        
+        try {
+            // ✅ LLAMADA A LA FUNCIÓN COMPARTIDA
+            await imprimirEtiquetaTerminado(printCharacteristic, fardo, silent);
+            
+        } catch (error) {
+            console.error("Error en impresión:", error);
+            
+            // Si hubo error de conexión, limpiar el characteristic para forzar reconexión
+            if (error.message.includes('GATT') || error.message.includes('disconnect')) {
+                printCharacteristic = null;
+                bluetoothDevice = null;
+                if (!silent) alert("⚠️ Conexión perdida. Presiona 'Conectar BT' de nuevo.");
+            }
         }
-        if(!silent) alert("✅ Enviado");
     }
 </script>
 
