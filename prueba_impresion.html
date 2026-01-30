@@ -94,8 +94,15 @@
         async function conectarYProbar() {
             const statusTag = document.getElementById('bt-status-tag');
             try {
-                writeLog("1. Abriendo selector de Bluetooth...");
+                writeLog("0. Verificando disponibilidad de Bluetooth...");
+                if (!navigator.bluetooth) {
+                    throw new Error("Web Bluetooth no está disponible. Revisa los permisos de Bluefy en Ajustes.");
+                }
+
+                const availability = await navigator.bluetooth.getAvailability();
+                writeLog(availability ? "✅ Bluetooth disponible." : "❌ Bluetooth desactivado en el iPhone.");
                 
+                writeLog("1. Abriendo selector de Bluetooth...");
                 // Cambiamos a acceptAllDevices para forzar la aparición del diálogo de iOS
                 deviceGlobal = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
@@ -170,7 +177,12 @@
                 writeLog("9. ✅ ¡Proceso finalizado! Revisa la impresora.");
 
             } catch (error) {
-                writeLog(`❌ ERROR CRÍTICO: ${error.message}`);
+                if (error.name === 'NotFoundError') {
+                    writeLog("ℹ️ Selección cancelada o no se encontró el dispositivo.");
+                } else {
+                    writeLog(`❌ ERROR CRÍTICO: ${error.message}`);
+                    console.error(error);
+                }
                 statusTag.innerText = "ERROR";
                 statusTag.className = "status-tag status-off";
             }
