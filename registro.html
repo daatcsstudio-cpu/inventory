@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <script src="formato_etiqueta_producto_terminado.js"></script>
     
     <style>
         :root {
@@ -826,244 +827,42 @@
         XLSX.writeFile(workbook, `Inventario_Lote_${fardosData[0].lote}.xlsx`);
     }
 
-    // ==========================================
-    // BLUETOOTH - VERSIÓN OPTIMIZADA PARA BLUEFY
-    // ==========================================
+    // --- Lógica Bluetooth (Web Bluetooth API) ---
     async function conectarBluetooth() {
-        debug('🔍 Iniciando búsqueda de dispositivos Bluetooth...', 'info');
-        
         try {
-            // Lista de UUIDs de servicios comunes en impresoras térmicas
-            const servicios = [
-                '000018f0-0000-1000-8000-00805f9b34fb', // TSPL Standard
-                'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // MPT-II / Chinas
-                '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Feasycom/Transparent
-                '0000ff00-0000-1000-8000-00805f9b34fb', // MHT
-                '0000ae00-0000-1000-8000-00805f9b34fb', // MHT Variante
-                '6e400001-b5a3-f393-e0a9-e50e24dcca9e'  // Nordic UART / Varios
-            ];
-
-            debug('📋 Servicios a buscar: ' + servicios.length, 'info');
-
-            // Solicitar dispositivo
-            const device = await navigator.bluetooth.requestDevice({
+            // Solicitar dispositivo (acepta todos para encontrar la MTH)
+            bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
-                optionalServices: servicios
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] // Servicio estándar de impresoras
             });
-
-            debug(`✅ Dispositivo seleccionado: ${device.name || 'Sin nombre'}`, 'success');
-            debug(`   ID: ${device.id}`, 'info');
-
-            // Conectar al servidor GATT
-            debug('🔗 Conectando al servidor GATT...', 'info');
-            const server = await device.gatt.connect();
-            debug('✅ Servidor GATT conectado', 'success');
-
-            // Buscar servicio y característica compatible
-            let characteristic = null;
-            let servicioEncontrado = null;
-
-            for (const uuid of servicios) {
-                try {
-                    debug(`   Probando servicio: ${uuid.substring(0, 8)}...`, 'info');
-                    const service = await server.getPrimaryService(uuid);
-                    const characteristics = await service.getCharacteristics();
-                    
-                    debug(`   Encontradas ${characteristics.length} características`, 'info');
-                    
-                    for (const char of characteristics) {
-                        const props = [];
-                        if (char.properties.write) props.push('write');
-                        if (char.properties.writeWithoutResponse) props.push('writeWithoutResponse');
-                        if (char.properties.notify) props.push('notify');
-                        
-                        debug(`      Característica: ${char.uuid.substring(0, 8)}... [${props.join(', ')}]`, 'info');
-                        
-                        if (char.properties.write || char.properties.writeWithoutResponse) {
-                            characteristic = char;
-                            servicioEncontrado = uuid;
-                            debug(`✅ Característica de escritura encontrada!`, 'success');
-                            break;
-                        }
-                    }
-                    
-                    if (characteristic) break;
-                    
-                } catch (e) {
-                    // Silencioso para no llenar el log
-                }
-            }
-
-            // FALLBACK: Si no se encontró en la lista conocida, buscar en TODOS los servicios disponibles
-            if (!characteristic) {
-                debug('⚠️ Servicios conocidos fallaron. Iniciando escaneo profundo...', 'warning');
-                try {
-                    const allServices = await server.getPrimaryServices();
-                    debug(`   Dispositivo ofrece ${allServices.length} servicios totales`, 'info');
-                    
-                    for (const service of allServices) {
-                        const chars = await service.getCharacteristics();
-                        for (const char of chars) {
-                            if (char.properties.write || char.properties.writeWithoutResponse) {
-                                characteristic = char;
-                                servicioEncontrado = service.uuid;
-                                debug(`✅ Característica descubierta en escaneo: ${char.uuid}`, 'success');
-                                break;
-                            }
-                        }
-                        if (characteristic) break;
-                    }
-                } catch (e) {
-                    debug('❌ Falló el escaneo profundo: ' + e.message, 'error');
-                }
-            }
-
-            if (!characteristic) {
-                throw new Error('No se encontró una característica de escritura compatible en ningún servicio');
-            }
-
-            // Guardar globalmente
-            printCharacteristic = characteristic;
-            bluetoothDevice = device;
-
-            debug(`🎉 CONEXIÓN EXITOSA`, 'success');
-            debug(`   Servicio usado: ${servicioEncontrado.substring(0, 8)}...`, 'info');
-            debug(`   Característica: ${characteristic.uuid.substring(0, 8)}...`, 'info');
             
-            alert(`✅ CONECTADO!\n\nImpresora: ${device.name || 'Sin nombre'}\nListo para imprimir`);
-
+            const server = await bluetoothDevice.gatt.connect();
+            // Intentamos obtener el servicio de impresión estándar
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            // Característica de escritura estándar
+            printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+            
+            alert("¡Conectado a " + bluetoothDevice.name + "!");
         } catch (error) {
-            debug(`❌ ERROR DE CONEXIÓN: ${error.message}`, 'error');
-            console.error('Error completo:', error);
-            
-            let mensaje = 'Error al conectar con la impresora:\n\n';
-            
-            if (error.name === 'NotFoundError') {
-                mensaje += '• No se seleccionó ningún dispositivo\n';
-            } else if (error.name === 'SecurityError') {
-                mensaje += '• Problema de permisos de Bluetooth\n';
-                mensaje += '• Verifica permisos en configuración del navegador\n';
-            } else if (error.message.includes('GATT')) {
-                mensaje += '• La impresora rechazó la conexión\n';
-                mensaje += '• Intenta apagarla y encenderla de nuevo\n';
-            } else {
-                mensaje += error.message + '\n';
-            }
-            
-            mensaje += '\n💡 Recomendaciones:\n';
-            mensaje += '• Asegúrate de que la impresora esté encendida\n';
-            mensaje += '• Mantén el dispositivo cerca (< 3 metros)\n';
-            mensaje += '• Verifica que Bluetooth esté activado\n';
-            mensaje += '• En iOS usa Bluefy Browser';
-            
-            alert(mensaje);
+            console.error(error);
+            alert("Error al conectar: " + error + "\n\nAsegúrate de usar Bluefy y tener el Bluetooth encendido.");
         }
     }
 
     async function imprimirBluetooth(index, silent = false) {
         if (!printCharacteristic) {
-            debug('⚠️ No hay impresora conectada', 'warning');
-            if (!silent) alert('⚠️ Primero debes conectar la impresora\n\nPresiona el botón "Conectar BT"');
-            await conectarBluetooth();
-            if (!printCharacteristic) return;
+            alert("Primero debes conectar la impresora (Botón Gris arriba)");
+            return;
         }
 
-        const fardo = fardosData[index];
-        debug(`🖨️ Iniciando impresión del Fardo #${fardo.fardoNo}`, 'info');
-
+        const f = fardosData[index];
+        
         try {
-            const encoder = new TextEncoder();
-            const unidad = fardo.unidad || 'm2';
-            const unidadDisplay = unidad === 'ml' ? 'ML' : 'M2';
-
-            // Generar comandos TSPL
-            let cmd = "";
-            cmd += "SIZE 4,3\r\n";
-            cmd += "GAP 0.12,0\r\n";
-            cmd += "DIRECTION 1\r\n";
-            cmd += "CLS\r\n";
-            cmd += "DENSITY 10\r\n"; // Aumentado para mejor visibilidad
-
-            cmd += `BARCODE 60,20,"128",60,1,0,3,3,"${fardo.fardoNo}"\r\n`;
-            cmd += `TEXT 300,125,"3",0,1,1,2,"Lote: ${fardo.lote}"\r\n`;
-            cmd += `TEXT 350,45,"3",0,1,1,2,"Fardo: ${fardo.fardoNo}  -  ${fardo.m2} ${unidadDisplay}"\r\n`;
-            cmd += `BAR 40,155,720,2\r\n`;
-            cmd += `TEXT 266,175,"3",0,1,1,2,"${fardo.producto}"\r\n`;
-            cmd += `TEXT 206,210,"3",0,1,1,2,"${fardo.grosor} x ${fardo.ancho} pulg  -  ${fardo.especie}"\r\n`;
-            cmd += `BAR 40,240,720,2\r\n`;
-            cmd += `TEXT 60,260,"3",0,1,1,"LARGO"\r\n`;
-            cmd += `TEXT 314,260,"3",0,1,1,"PIEZAS"\r\n`;
-            cmd += `TEXT 650,260,"3",0,1,1,"${unidadDisplay}"\r\n`;
-
-            let y = 290;
-            if (fardo.detalles && fardo.detalles.length > 0) {
-                fardo.detalles.forEach((d, idx) => {
-                    if (y < 500) {
-                        const metros_linea = (unidad === 'ml')
-                            ? d.piezas * (d.largo * 0.3048)
-                            : d.piezas * (d.largo * 0.3048) * (fardo.ancho * 0.0254);
-                        
-                        cmd += `TEXT 60,${y},"3",0,1,1,"${d.largo}"\r\n`;
-                        cmd += `TEXT 350,${y},"3",0,1,1,"${d.piezas}"\r\n`;
-                        cmd += `TEXT 650,${y},"3",0,1,1,"${metros_linea.toFixed(2)}"\r\n`;
-                        y += 35;
-                    }
-                });
-            }
-
-            cmd += `BAR 40,510,720,2\r\n`;
-            const totalPzs = fardo.detalles ? fardo.detalles.reduce((acc, d) => acc + d.piezas, 0) : 0;
-            cmd += `TEXT 158,540,"3",0,1,1,"TOTAL PIEZAS: ${totalPzs}"\r\n`;
-            cmd += `TEXT 532,540,"3",0,1,1,3,"TOTAL: ${fardo.m2} ${unidadDisplay}"\r\n`;
-            cmd += "PRINT 1,1\r\n";
-
-            // Enviar en chunks
-            const encodedData = encoder.encode(cmd);
-            const CHUNK_SIZE = 20;
-            const totalChunks = Math.ceil(encodedData.length / CHUNK_SIZE);
-            
-            debug(`📤 Enviando ${encodedData.length} bytes en ${totalChunks} paquetes...`, 'info');
-
-            for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
-                const chunk = encodedData.slice(i, i + CHUNK_SIZE);
-                const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
-                
-                try {
-                    // Intentar writeWithoutResponse primero (más rápido)
-                    if (printCharacteristic.properties.writeWithoutResponse) {
-                        await printCharacteristic.writeValueWithoutResponse(chunk);
-                    } else {
-                        await printCharacteristic.writeValue(chunk);
-                    }
-                    
-                    if (chunkNum % 10 === 0) {
-                        debug(`   Progreso: ${chunkNum}/${totalChunks} paquetes`, 'info');
-                    }
-                } catch (writeError) {
-                    debug(`❌ Error en paquete ${chunkNum}: ${writeError.message}`, 'error');
-                    throw writeError;
-                }
-                
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-
-            debug(`✅ Impresión completada (${totalChunks} paquetes enviados)`, 'success');
-            if (!silent) alert(`✅ Etiqueta enviada!\n\nFardo #${fardo.fardoNo}\nRevisa la impresora`);
-
+            // Usar la función compartida del archivo externo
+            await imprimirEtiquetaTerminado(printCharacteristic, f, silent);
         } catch (error) {
-            debug(`❌ ERROR DE IMPRESIÓN: ${error.message}`, 'error');
-            console.error('Error completo:', error);
-            
-            // Limpiar conexión si es error de GATT
-            if (error.message.includes('GATT') || error.message.includes('disconnect')) {
-                printCharacteristic = null;
-                bluetoothDevice = null;
-                debug('🔌 Conexión perdida - Reconectar necesario', 'warning');
-            }
-            
-            if (!silent) {
-                alert(`❌ Error al imprimir:\n\n${error.message}\n\nRevisa el log de debug para más detalles.\n\nSi persiste, reconecta la impresora.`);
-            }
+            alert("Error enviando datos: " + error);
+            conectarBluetooth();
         }
     }
 

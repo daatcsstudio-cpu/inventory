@@ -288,61 +288,26 @@
     async function conectarBluetooth(silent = false) {
         const status = document.getElementById('btStatus');
         if(!silent) status.innerText = "⏳ Buscando...";
+        
         try {
-            let device;
-            if (silent && navigator.bluetooth.getDevices) {
-                const devices = await navigator.bluetooth.getDevices();
-                if (devices.length > 0) device = devices[0];
-            }
+            // Solicitar dispositivo (acepta todos para encontrar la MTH)
+            bluetoothDevice = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] // Servicio estándar de impresoras
+            });
             
-            const serviciosOpcionales = [
-                '000018f0-0000-1000-8000-00805f9b34fb', 
-                'e7810a71-73ae-499d-8c15-faa9aef0c3f2', 
-                '49535343-fe7d-4ae5-8fa9-9fafd205e455',
-                '0000ff00-0000-1000-8000-00805f9b34fb',
-                '734e665b-eb21-4061-bdb3-2d55ce395bbe'
-            ];
-
-            if (!device) {
-                device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: serviciosOpcionales });
-            }
-            const server = await device.gatt.connect();
+            const server = await bluetoothDevice.gatt.connect();
+            // Intentamos obtener el servicio de impresión estándar
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            // Característica de escritura estándar
+            printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
             
-            let characteristic;
-            for (const sUuid of serviciosOpcionales) {
-                try {
-                    const service = await server.getPrimaryService(sUuid);
-                    const characteristics = await service.getCharacteristics();
-                    characteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
-                    if (characteristic) break;
-                } catch (e) { }
-            }
-
-            // Fallback: Descubrimiento automático para Meihengtong y otras
-            if (!characteristic) {
-                try {
-                    const services = await server.getPrimaryServices();
-                    for (const service of services) {
-                        const characteristics = await service.getCharacteristics();
-                        characteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
-                        if (characteristic) {
-                            alert("✅ Servicio descubierto: " + service.uuid);
-                            break;
-                        }
-                    }
-                } catch(e) {}
-            }
-
-            if (!characteristic) throw new Error("Servicio de impresión no soportado.");
-
-            printCharacteristic = characteristic;
-            bluetoothDevice = device;
-            status.innerText = "✅ Conectado: " + device.name;
+            status.innerText = "✅ Conectado: " + bluetoothDevice.name;
             status.style.color = "#27ae60";
-            if(!silent) alert("Conectado");
+            if(!silent) alert("¡Conectado a " + bluetoothDevice.name + "!");
         } catch (error) {
             status.innerText = "❌ Desconectado"; status.style.color = "red";
-            if(!silent) alert("Error: " + error.message);
+            if(!silent) alert("Error al conectar: " + error + "\n\nAsegúrate de usar Bluefy y tener el Bluetooth encendido.");
         }
     }
 

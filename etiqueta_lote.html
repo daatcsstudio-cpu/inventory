@@ -377,64 +377,30 @@
         if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
 
         try {
-            // Al usar acceptAllDevices, iOS mostrará la lista de dispositivos sí o sí
-            const serviciosOpcionales = [
-                '000018f0-0000-1000-8000-00805f9b34fb', 
-                'e7810a71-73ae-499d-8c15-faa9aef0c3f2', 
-                '49535343-fe7d-4ae5-8fa9-9fafd205e455',
-                '0000ff00-0000-1000-8000-00805f9b34fb',
-                '734e665b-eb21-4061-bdb3-2d55ce395bbe'
-            ];
-
+            // Solicitar dispositivo (acepta todos para encontrar la MTH)
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
-                optionalServices: serviciosOpcionales
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] // Servicio estándar de impresoras
             });
             
-            if(statusDiv) statusDiv.innerText = "🔗 Sincronizando con " + bluetoothDevice.name;
-            
             const server = await bluetoothDevice.gatt.connect();
-            
-            for (const sUuid of serviciosOpcionales) {
-                try {
-                    const service = await server.getPrimaryService(sUuid);
-                    const characteristics = await service.getCharacteristics();
-                    printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
-                    if (printCharacteristic) break;
-                } catch (e) {}
-            }
-
-            // Fallback: Descubrimiento automático
-            if (!printCharacteristic) {
-                try {
-                    const services = await server.getPrimaryServices();
-                    for (const service of services) {
-                        const characteristics = await service.getCharacteristics();
-                        printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
-                        if (printCharacteristic) {
-                            alert("✅ Servicio descubierto: " + service.uuid);
-                            break;
-                        }
-                    }
-                } catch(e) {}
-            }
-
-            if (!printCharacteristic) throw new Error("Servicio de impresión no encontrado.");
+            // Intentamos obtener el servicio de impresión estándar
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            // Característica de escritura estándar
+            printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
             
             if(statusDiv) { 
                 statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; 
                 statusDiv.style.color = "green"; 
             }
-            alert("✅ ¡CONECTADO!\nAhora puedes imprimir las etiquetas de la cola.");
-
+            alert("¡Conectado a " + bluetoothDevice.name + "!");
         } catch (error) {
-            console.log("Error en Bluefy:", error);
+            console.error(error);
             if(statusDiv) { 
                 statusDiv.innerText = "❌ Error de conexión"; 
                 statusDiv.style.color = "red"; 
             }
-            // Esta alerta te dirá exactamente por qué falló en el iPhone
-            alert("⚠️ No se pudo conectar: " + error.message);
+            alert("Error al conectar: " + error + "\n\nAsegúrate de usar Bluefy y tener el Bluetooth encendido.");
         }
     }
 </script>
