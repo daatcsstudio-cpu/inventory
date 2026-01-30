@@ -361,11 +361,7 @@
             const encodedData = encoder.encode(cmd);
             const CHUNK_SIZE = 20; // Reducido a 20 para estabilidad
             for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
-                if (printCharacteristic.properties.write) {
-                    await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
-                } else {
-                    await printCharacteristic.writeValueWithoutResponse(encodedData.slice(i, i + CHUNK_SIZE));
-                }
+                await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
                 await new Promise(resolve => setTimeout(resolve, 80)); // Pausa aumentada
             }
             alert("✅ Etiqueta de Lote enviada.");
@@ -377,19 +373,14 @@
     }
 
     async function conectarBluetooth() {
-        const btn = document.querySelector('button[onclick="conectarBluetooth()"]');
         const statusDiv = document.getElementById('status');
-        const originalText = btn.innerText;
-
-        btn.innerText = "⏳ Conectando...";
-        btn.style.backgroundColor = "#f39c12";
-        if(statusDiv) statusDiv.innerText = "⏳ Buscando...";
+        if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
 
         try {
             // Solicitar dispositivo (acepta todos para encontrar la MTH)
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
             });
             
             btn.innerText = "🔗 Vinculando...";
@@ -397,25 +388,25 @@
             
             let characteristic;
 
-            // 1. MHT (Prioridad)
             try {
-                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-                characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
+                const services = await server.getPrimaryServices();
+                for (const service of services) {
+                    const characteristics = await service.getCharacteristics();
+                    const candidate = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
+                    if (candidate) {
+                        characteristic = candidate;
+                        break;
+                    }
+                }
             } catch (e) {}
 
-            // 2. Estándar
-            if (!characteristic) {
-                try {
-                    const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                    characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                } catch (e) {}
-            }
+            if (!characteristic) throw new Error("No se encontró servicio de impresión compatible.");
 
             printCharacteristic = characteristic;
             
-            if(statusDiv) { 
-                statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; 
-                statusDiv.style.color = "green"; 
+            if(statusDiv) {
+                statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name;
+                statusDiv.style.color = "green";
             }
             btn.innerText = "✅ Conectado";
             btn.style.backgroundColor = "#27ae60";
