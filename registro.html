@@ -550,7 +550,7 @@
                 ancho: anchoGlobal,
                 especie: document.getElementById('especie').value,
                 detalles: [...currentDetalles], // Copia del array
-                m2: parseFloat(totalMetros.toFixed(2)), // Enviar como número para asegurar formato correcto en BD
+                m2: parseFloat(totalMetros.toFixed(2)), // Número puro (ej: 12.5) para que Sheets use su formato
                 unidad: unidad
             };
 
@@ -565,10 +565,18 @@
             }
 
             // --- SINCRONIZACIÓN CON GOOGLE SHEETS ---
+            // Preparamos un payload seguro para evitar que Sheets convierta fracciones a fechas
+            // Solución al error de filas mixtas (Fecha/Texto)
+            const payload = { ...fardo };
+            if (String(payload.grosor).includes('/')) {
+                payload.grosor = "'" + payload.grosor;
+            }
+
             // Enviar el objeto fardo completo.
             fetch(GOOGLE_SCRIPT_URL, {
                 method: "POST",
                 body: JSON.stringify(fardo)
+                body: JSON.stringify(payload)
             })
             .then(res => console.log("Enviado a Sheets"))
             .catch(err => console.error("Error enviando a Sheets: " + err));

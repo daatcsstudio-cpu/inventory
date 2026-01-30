@@ -538,6 +538,11 @@
             fechaSecado: ""
         };
 
+        // Prevenir conversión a fecha en Sheets para espesor (ej: 4/4)
+        if (String(encabezado.espesor).includes('/')) {
+            encabezado.espesor = "'" + encabezado.espesor;
+        }
+
         // Recopilar Detalles (Solo celdas con valores > 0)
         const detalles = [];
         const tbody = table.tBodies[0];
