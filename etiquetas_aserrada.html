@@ -401,10 +401,12 @@
             const originalText = btn ? btn.innerText : "Conectar";
 
             try {
-                // Solicitar dispositivo (filtros específicos para MHT)
+                // Solicitar dispositivo con nombre exacto del Selftest
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'MHT' }, { namePrefix: 'Printer' }, { namePrefix: 'MPT' }],
-                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
+                    filters: [
+                        { name: 'MHT-L1081-13E2-B' }
+                    ],
+                    optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb']
                 });
                 
                 if(btn) btn.innerText = "🔗 Vinculando...";

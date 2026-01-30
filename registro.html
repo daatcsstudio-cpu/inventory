@@ -787,10 +787,9 @@
 
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 filters: [
-                    { name: 'MHT-L1081-13E2-B' },
-                    { namePrefix: 'MHT' }
+                    { name: 'MHT-L1081-13E2-B' }
                 ],
-                optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb', '0000fee7-0000-1000-8000-00805f9b34fb']
+                optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb']
             });
             
             btn.innerText = "🔗 Conectando...";

@@ -377,10 +377,12 @@
         if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
 
         try {
-            // Solicitar dispositivo (acepta todos para encontrar la MTH)
+            // Solicitar dispositivo con nombre exacto del Selftest
             bluetoothDevice = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+                filters: [
+                    { name: 'MHT-L1081-13E2-B' }
+                ],
+                optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb']
             });
             
             btn.innerText = "🔗 Vinculando...";

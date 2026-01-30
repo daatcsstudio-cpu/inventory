@@ -133,8 +133,10 @@
         try {
             statusDiv.innerText = "⏳ Buscando dispositivo...";
             bluetoothDevice = await navigator.bluetooth.requestDevice({
-                filters: [{ namePrefix: 'MHT' }, { namePrefix: 'MPT' }, { namePrefix: 'Printer' }],
-                optionalServices: [PRINTER_SERVICE_UUID]
+                filters: [
+                    { name: 'MHT-L1081-13E2-B' }
+                ],
+                optionalServices: [PRINTER_SERVICE_UUID, '000018f0-0000-1000-8000-00805f9b34fb']
             });
 
             statusDiv.innerText = "🔗 Conectando...";
