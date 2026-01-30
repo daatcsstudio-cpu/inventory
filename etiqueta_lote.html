@@ -183,20 +183,11 @@
         // Intentar reconexión silenciosa si el navegador lo soporta (Chrome/Bluefy con permisos previos)
         if (navigator.bluetooth && navigator.bluetooth.getDevices) {
             navigator.bluetooth.getDevices().then(devices => {
-                    const myPrinter = devices.find(d => d.name.includes('MTH') || d.name.includes('Printer'));
+                const myPrinter = devices.find(d => d.name === 'MTH-L1081-13E2');
                 if (myPrinter) {
                     myPrinter.gatt.connect()
-                        .then(async server => {
-                            let characteristic;
-                            try {
-                                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                                characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                            } catch (e) {
-                                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-                                characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-                            }
-                            return characteristic;
-                        })
+                    .then(server => server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb'))
+                    .then(service => service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb'))
                     .then(characteristic => {
                         printCharacteristic = characteristic;
                         bluetoothDevice = myPrinter;
@@ -381,21 +372,12 @@
         try {
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
             });
             
             const server = await bluetoothDevice.gatt.connect();
-            
-            let characteristic;
-            try {
-                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-            } catch (e) {
-                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-                characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-            }
-            
-            printCharacteristic = characteristic;
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
             alert("✅ Conectado a " + bluetoothDevice.name);
         } catch (error) {
             console.log("Cancelado o Error: " + error);
