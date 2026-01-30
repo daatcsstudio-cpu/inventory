@@ -774,6 +774,7 @@
     // --- Lógica Bluetooth (Web Bluetooth API) ---
     async function conectarBluetooth() {
         const btn = document.querySelector('button[onclick="conectarBluetooth()"]');
+        if (!btn) return;
         const originalText = btn.innerText;
         btn.innerText = "⏳ Conectando...";
         btn.style.backgroundColor = "#f39c12"; // Naranja
@@ -787,24 +788,23 @@
             btn.innerText = "🔗 Vinculando...";
             const server = await bluetoothDevice.gatt.connect();
             
+            btn.innerText = "🔍 Buscando Servicio...";
+            await new Promise(resolve => setTimeout(resolve, 500)); // Pausa de estabilidad para iOS
+            
             let characteristic;
 
-            // 1. Intentar primero con el servicio MHT (ff00) - Prioridad para MTH-L1081
+            // Intentar servicio MHT directamente (ff00)
             try {
                 const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
                 characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-                // Forzar modo sin respuesta para MHT si está disponible
-                if (characteristic.properties.writeWithoutResponse) {
-                    console.log("Usando modo Write Without Response para MHT");
-                }
-            } catch (e) { console.log("MHT service not found, trying standard..."); }
-
-            // 2. Si falla, intentar con el servicio estándar
-            if (!characteristic) {
+            } catch (e) {
+                console.log("MHT service not found, trying standard...");
                 try {
                     const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
                     characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                } catch (e) { console.log("Standard service not found."); }
+                } catch (e2) {
+                    console.log("Standard service not found.");
+                }
             }
 
             if (!characteristic) throw new Error("No se encontró servicio de impresión compatible.");
@@ -816,10 +816,12 @@
             alert("¡Conectado a " + bluetoothDevice.name + "!");
         } catch (error) {
             console.error(error);
-            btn.innerText = "❌ Error";
-            btn.style.backgroundColor = "#e74c3c"; // Rojo
-            setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = ""; }, 3000);
-            alert("Error al conectar: " + error + "\n\nAsegúrate de usar Bluefy y tener el Bluetooth encendido.");
+            if(btn) {
+                btn.innerText = "❌ Error";
+                btn.style.backgroundColor = "#e74c3c"; // Rojo
+                setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = ""; }, 3000);
+            }
+            alert("Error al conectar: " + error.message + "\n\nTip: Si se queda pegado, apaga y enciende el Bluetooth de la impresora.");
         }
     }
 

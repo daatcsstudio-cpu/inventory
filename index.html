@@ -141,8 +141,10 @@
 
             <!-- Footer Sidebar -->
             <div class="p-4 bg-slate-950 border-t border-slate-800">
-                <div class="flex items-center gap-3">
-                </div>
+                <button onclick="cerrarSesion()" class="flex items-center gap-3 px-4 py-3 w-full text-red-400 rounded-lg hover:bg-red-500/10 transition-colors">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                    <span class="font-medium">Cerrar Sesión</span>
+                </button>
             </div>
         </aside>
 
@@ -175,9 +177,14 @@
                             <h1 class="text-2xl font-bold text-slate-800">Resumen General</h1>
                             <p class="text-slate-500 text-sm">Bienvenido al panel de control de inventario.</p>
                         </div>
-                        <button id="btn-export-dashboard" onclick="exportarDatos()" class="px-4 py-2 bg-white border border-gray-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
-                            <i data-lucide="download" class="w-4 h-4"></i> Exportar Datos
-                        </button>
+                        <div class="flex gap-2">
+                            <button id="btn-export-dashboard" onclick="exportarDatos()" class="px-4 py-2 bg-white border border-gray-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
+                                <i data-lucide="download" class="w-4 h-4"></i> Exportar Datos
+                            </button>
+                            <button onclick="cerrarSesion()" class="px-4 py-2 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors shadow-sm flex items-center gap-2">
+                                <i data-lucide="log-out" class="w-4 h-4"></i> Cerrar Sesión
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Tarjetas de Estadísticas Dinámicas -->
@@ -1322,13 +1329,12 @@
             const user = document.getElementById('user-login').value;
             const pass = document.getElementById('pass-login').value;
             const errorMsg = document.getElementById('login-error');
+            let sessionData = null;
 
             if (user === "admin" && pass === "gibor2026") {
-                actualizarSaludoFijo("Michelle Giron", "Administrador");
-                configurarVista("admin");
+                sessionData = { name: "Michelle Giron", role: "admin" };
             } else if (user === "inventario" && pass === "inventario2026") {
-                actualizarSaludoFijo("Jose Corado", "Inventario");
-                configurarVista("inventario");
+                sessionData = { name: "Jose Corado", role: "inventario" };
             } else {
                 errorMsg.classList.remove('hidden');
                 // Efecto de sacudida en caso de error
@@ -1339,6 +1345,11 @@
                 }
                 return;
             }
+
+            // Guardar sesión de forma persistente
+            localStorage.setItem('gibor_session', JSON.stringify(sessionData));
+            actualizarSaludoFijo(sessionData.name, sessionData.role);
+            configurarVista(sessionData.role);
 
             // Animación de salida del login
             const loginScreen = document.getElementById('login-screen');
@@ -1369,6 +1380,29 @@
                 if (exportBtn) exportBtn.style.display = 'flex';
             }
         }
+
+        function cerrarSesion() {
+            if(confirm("¿Estás seguro de que deseas cerrar la sesión?")) {
+                localStorage.removeItem('gibor_session');
+                location.reload();
+            }
+        }
+
+        // Verificar sesión al cargar la página
+        window.addEventListener('DOMContentLoaded', () => {
+            const session = localStorage.getItem('gibor_session');
+            if (session) {
+                const data = JSON.parse(session);
+                actualizarSaludoFijo(data.name, data.role);
+                configurarVista(data.role);
+                
+                const loginScreen = document.getElementById('login-screen');
+                loginScreen.classList.add('hidden');
+                
+                loadDashboardData();
+                lucide.createIcons();
+            }
+        });
     </script>
 </body>
 </html>
