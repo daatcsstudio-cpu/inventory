@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Etiquetas por Fardo - Meitong BT</title>
+    <title>Etiquetas por Fardo</title>
     <script src="formato_etiqueta_producto_terminado.js"></script>
+    <script src="bluetooth_printer.js"></script>
     <style>
         :root {
             --primary: #1A237E;
@@ -12,14 +13,14 @@
             --text-dark: #2c3e50;
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
             margin: 0;
             padding: 20px;
             color: var(--text-dark);
         }
         .container { max-width: 800px; margin: 0 auto; }
-        h2 { text-align: center; color: var(--primary); }
+        h2 { text-align: center; color: var(--primary); margin-bottom: 20px; }
         
         .card {
             background: white;
@@ -47,13 +48,17 @@
             border: none;
             border-radius: 10px;
             font-weight: bold;
+            font-size: 1rem;
             cursor: pointer;
+            transition: opacity 0.2s;
         }
-
+        button:active { opacity: 0.8; }
         .btn-search { background-color: var(--primary); color: white; }
-        .btn-print-all { background-color: #e67e22; color: white; }
+        .btn-print-all { background-color: #e67e22; color: white; margin-bottom: 20px; font-size: 1.1rem; }
         .btn-bt { background-color: #e0e6ed; color: var(--text-dark); margin-bottom: 15px; }
+        .btn-back { background-color: #e0e6ed; color: var(--text-dark); margin-top: 20px; display: block; text-align: center; text-decoration: none; }
 
+        /* Lista de Fardos */
         .fardo-item {
             display: flex;
             justify-content: space-between;
@@ -64,141 +69,232 @@
             border-radius: 10px;
             border-left: 5px solid var(--primary);
         }
+        .fardo-info { font-size: 0.9rem; }
+        .fardo-title { font-weight: bold; font-size: 1.1rem; color: var(--primary); }
+        .btn-print-single {
+            background-color: var(--text-dark);
+            color: white;
+            width: auto;
+            padding: 10px 20px;
+            margin: 0;
+            font-size: 0.9rem;
+        }
 
-        #status { text-align: center; font-size: 0.9rem; margin-bottom: 10px; color: #666; }
+        #results-area { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🏷️ Etiquetas de Fardo (Profesional)</h2>
-    <button id="btnConnect" class="btn-bt" onclick="conectarBluetooth()">📡 Conectar Impresora BT</button>
+    <h2>🏷️ Etiquetas de Fardo (Lote)</h2>
+    <button class="btn-bt" onclick="conectarBluetooth()">📡 Conectar Impresora BT</button>
     
-    <div id="status">Esperando conexión...</div>
-
     <div class="card">
+        <div id="status" style="text-align:center; color:#666; font-size:0.9rem; margin-bottom:10px;">Cargando inventario...</div>
         <label>Buscar Lote</label>
         <input type="text" id="loteInput" placeholder="Ej: L-2024-001">
         <button class="btn-search" onclick="buscarLote()">🔍 BUSCAR LOTE</button>
     </div>
 
-    <div id="results-area" style="display:none;">
-        <button class="btn-print-all" onclick="imprimirTodoElLote()">🖨️ IMPRIMIR TODO EL LOTE (BT)</button>
-        <div id="fardos-list" style="margin-top:20px;"></div>
+    <div id="results-area">
+        <div class="card" style="background: #fff3e0; border: 1px solid #ffe0b2;">
+            <h3 style="margin-top:0; text-align:center; color:#e67e22;">Opciones de Impresión</h3>
+            <p style="text-align:center; margin-bottom:15px;">Se encontraron <b id="count-fardos">0</b> fardos en este lote.</p>
+            
+            <button class="btn-print-all" onclick="imprimirTodoElLote()">🖨️ IMPRIMIR TODO EL LOTE</button>
+            <div style="text-align:center; font-size:0.8rem; color:#666;">(Imprime todas las etiquetas una tras otra)</div>
+        </div>
+
+        <h3 style="margin-left: 10px;">O imprimir individualmente:</h3>
+        <div id="fardos-list">
+            <!-- Lista generada dinámicamente -->
+        </div>
     </div>
+
+    <a href="menu_terminado.html" class="btn-back">⬅ Volver al Menú</a>
 </div>
 
 <script>
-    let bluetoothDevice;
-    let printCharacteristic;
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJm67IZXi_zHsxQv3mqosqb6-RyKp4-j-h-kqdP153HTN8t6lt7BPE5BrwSzphArkx/exec";
+    let inventarioAgrupado = []; // Array de objetos Fardo con sus detalles
     let fardosDelLote = [];
 
-    // Ejemplo de datos con detalles para que la tabla de tu .js funcione
-    let inventarioAgrupado = [
-        { 
-            lote: "L-2024-001", 
-            fardoNo: "1", 
-            producto: "Pucte Sólido", 
-            especie: "Pucte", 
-            m2: 12.50, 
-            ancho: "5", 
-            grosor: "1",
-            detalles: [
-                { piezas: 10, largo: 8 },
-                { piezas: 5, largo: 10 }
-            ]
-        },
-        { 
-            lote: "L-2024-001", 
-            fardoNo: "2", 
-            producto: "Manchiche Deck", 
-            especie: "Manchiche", 
-            m2: 10.20, 
-            ancho: "4", 
-            grosor: "1",
-            detalles: [
-                { piezas: 20, largo: 7 }
-            ]
-        }
-    ];
+    window.onload = function() {
+        cargarDatos();
+        document.getElementById('loteInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') buscarLote();
+        });
+    };
 
-    async function conectarBluetooth() {
-        try {
-            bluetoothDevice = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
-            });
+    function cargarDatos() {
+        fetch(GOOGLE_SCRIPT_URL)
+        .then(res => res.json())
+        .then(data => {
+            procesarDatos(data);
+            document.getElementById('status').innerText = `✅ Inventario cargado (${inventarioAgrupado.length} fardos únicos)`;
+            document.getElementById('status').style.color = "green";
+        })
+        .catch(err => {
+            document.getElementById('status').innerText = "❌ Error cargando datos";
+            console.error(err);
+        });
+    }
 
-            const server = await bluetoothDevice.gatt.connect();
+    function procesarDatos(data) {
+        const agrupado = {};
+        
+        data.forEach(row => {
+            // Helper para buscar valor ignorando mayúsculas/espacios y variaciones
+            const getVal = (keys) => {
+                if (!Array.isArray(keys)) keys = [keys];
+                for (const k of keys) {
+                    if (row[k] !== undefined && row[k] !== "") return row[k];
+                    // Búsqueda insensible a mayúsculas/minúsculas
+                    const foundKey = Object.keys(row).find(rk => rk.trim().toLowerCase() === k.toLowerCase());
+                    if (foundKey && row[foundKey] !== "") return row[foundKey];
+                }
+                return null;
+            };
 
-            let characteristic;
-            try {
-                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-            } catch (e) {
-                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-                characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
+            const lote = getVal(['# Lote', 'Lote', 'lote']);
+            const fardoNo = getVal(['# Fardo', 'Fardo', 'fardo']);
+            
+            if (!lote || !fardoNo) return;
+
+            const key = lote + "-" + fardoNo;
+
+            if (!agrupado[key]) {
+                agrupado[key] = {
+                    lote: lote,
+                    fardoNo: fardoNo,
+                    producto: getVal(['Producto', 'Calidad', 'producto']) || '',
+                    especie: getVal(['Especie', 'especie']) || '',
+                    grosor: formatearGrosor(getVal(['Grosor "', 'Grosor', 'grosor'])),
+                    ancho: parseFloat(getVal(['Ancho "', 'Ancho', 'ancho'])) || 0,
+                    m2: 0,
+                    detalles: []
+                };
             }
-            printCharacteristic = characteristic;
-            alert("✅ Conectado a " + bluetoothDevice.name);
-        } catch (error) {
-            console.log("Cancelado o Error: " + error);
+
+            // 1. Intentar leer columnas planas (si el sheet tiene filas desglosadas)
+            const pzs = parseInt(getVal(['Piezas', 'Total Piezas', 'Pzs', 'piezas', 'CANTIDAD', 'Cant', 'PZ'])) || 0;
+            const largo = parseFloat(getVal(['Largo', 'Largo \'', 'Largo\'', 'Largo_Ft', 'Largo (ft)', 'largo', 'LENGTH', 'Largo_Pies', 'LG'])) || 0;
+            
+            if (pzs > 0 && largo > 0) {
+                agrupado[key].detalles.push({ piezas: pzs, largo: largo });
+            }
+
+            // 2. Intentar leer columna 'Detalles' JSON (si existe)
+            const detallesJSON = getVal(['Detalles', 'detalles', 'Items']);
+            if (detallesJSON && typeof detallesJSON === 'string' && (detallesJSON.startsWith('[') || detallesJSON.startsWith('{'))) {
+                try {
+                    const parsed = JSON.parse(detallesJSON);
+                    const arr = Array.isArray(parsed) ? parsed : (parsed.detalles || []);
+                    arr.forEach(d => {
+                        agrupado[key].detalles.push({
+                            piezas: parseInt(d.piezas || d.Piezas || d.pzs),
+                            largo: parseFloat(d.largo || d.Largo || d.l)
+                        });
+                    });
+                } catch(e) {}
+            }
+
+            // Leer M2 (si no hay detalles, usaremos este valor; si hay, lo recalcularemos)
+            const m2Row = parseFloat(getVal(['M2', 'm2', 'M2_Total_Fardo'])) || 0;
+            if (m2Row > agrupado[key].m2) agrupado[key].m2 = m2Row;
+        });
+
+        // Convertir a array y redondear M2
+        inventarioAgrupado = Object.values(agrupado).map(f => {
+            // Si tenemos detalles, RECALCULAMOS M2 para asegurar precisión y evitar duplicados de suma
+            if (f.detalles.length > 0 && f.ancho > 0) {
+                let m2Calc = 0;
+                f.detalles.forEach(d => {
+                    m2Calc += d.piezas * (d.largo * 0.3048) * (f.ancho * 0.0254);
+                });
+                f.m2 = parseFloat(m2Calc.toFixed(2));
+            }
+            f.m2 = parseFloat(f.m2.toFixed(2));
+            return f;
+        });
+    }
+
+    function formatearGrosor(valor) {
+        if (typeof valor === 'string' && valor.includes('T') && !isNaN(Date.parse(valor))) {
+            const fecha = new Date(valor);
+            return `${fecha.getDate()}/${fecha.getMonth() + 1}`;
         }
+        return valor || '';
     }
 
     function buscarLote() {
-        const input = document.getElementById('loteInput').value.trim();
-        fardosDelLote = inventarioAgrupado.filter(f => f.lote === input);
+        const loteBusqueda = document.getElementById('loteInput').value.trim();
+        if (!loteBusqueda) return;
 
-        if (fardosDelLote.length > 0) {
-            renderizarLista();
-            document.getElementById('results-area').style.display = 'block';
-        } else {
-            alert("No se encontró el lote.");
+        fardosDelLote = inventarioAgrupado.filter(f => String(f.lote) === String(loteBusqueda));
+
+        if (fardosDelLote.length === 0) {
+            alert("No se encontraron fardos para el lote: " + loteBusqueda);
+            document.getElementById('results-area').style.display = 'none';
+            return;
         }
+
+        // Ordenar por número de fardo
+        fardosDelLote.sort((a, b) => parseInt(a.fardoNo) - parseInt(b.fardoNo));
+
+        document.getElementById('count-fardos').innerText = fardosDelLote.length;
+        renderizarLista();
+        document.getElementById('results-area').style.display = 'block';
     }
 
     function renderizarLista() {
         const container = document.getElementById('fardos-list');
         container.innerHTML = "";
+
         fardosDelLote.forEach((f, index) => {
             const div = document.createElement('div');
             div.className = 'fardo-item';
             div.innerHTML = `
                 <div>
-                    <strong>Fardo #${f.fardoNo}</strong><br>
-                    <small>${f.producto} - ${f.m2} m²</small>
+                    <div class="fardo-title">Fardo #${f.fardoNo}</div>
+                    <div class="fardo-info">${f.producto} - ${f.especie}</div>
+                    <div class="fardo-info">${f.m2} m² ${f.detalles.length > 0 ? '✅' : '⚠️ Sin detalles'}</div>
                 </div>
-                <button style="width:auto; padding:8px 15px; background:#1A237E; color:white;" 
-                        onclick="imprimirIndividual(${index})">Imprimir</button>
+                <button class="btn-print-single" onclick="imprimirFardoIndividual(${index})">🖨️ Imprimir</button>
             `;
             container.appendChild(div);
         });
     }
 
-    async function imprimirIndividual(index) {
+    // --- Lógica de Impresión ---
+
+    async function imprimirFardoIndividual(index) {
         if (!printCharacteristic) {
-            alert("Primero conecta la impresora.");
-            return;
+            await conectarBluetooth();
+            if (!printCharacteristic) return;
         }
-        // Llamamos a la función de tu archivo externo .js
-        try {
-            await imprimirEtiquetaTerminado(printCharacteristic, fardosDelLote[index]);
-        } catch (e) {
-            alert("Error al imprimir: " + e.message);
-        }
+        await enviarComandoEtiqueta(fardosDelLote[index]);
     }
 
     async function imprimirTodoElLote() {
-        if (!printCharacteristic) return alert("Conecta la impresora.");
-        if (!confirm(`¿Imprimir ${fardosDelLote.length} etiquetas?`)) return;
-        
-        for (const f of fardosDelLote) {
-            // Llamamos a la función de tu archivo externo en modo silencioso
-            await imprimirEtiquetaTerminado(printCharacteristic, f, true);
-            await new Promise(r => setTimeout(r, 1000)); // Pausa para estabilidad
+        if (!printCharacteristic) {
+            await conectarBluetooth();
+            if (!printCharacteristic) return;
         }
-        alert("Impresión de lote completa.");
+
+        if (!confirm(`¿Estás seguro de imprimir ${fardosDelLote.length} etiquetas? Asegúrate de tener papel.`)) return;
+
+        for (const fardo of fardosDelLote) {
+            await enviarComandoEtiqueta(fardo);
+            // Pequeña pausa entre etiquetas para no saturar
+            await new Promise(r => setTimeout(r, 500));
+        }
+        alert("✅ Impresión masiva finalizada.");
+    }
+
+    async function enviarComandoEtiqueta(f) {
+        // Usar la función compartida del archivo externo
+        await imprimirEtiquetaTerminado(printCharacteristic, f);
     }
 </script>
 

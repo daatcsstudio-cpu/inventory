@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ingreso de Tallys - Madera Aserrada</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="bluetooth_printer.js"></script>
     <style>
         :root {
             --primary: #1A237E;
@@ -211,8 +212,6 @@
 <script>
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJm67IZXi_zHsxQv3mqosqb6-RyKp4-j-h-kqdP153HTN8t6lt7BPE5BrwSzphArkx/exec";
     let inventarioRemoto = [];
-    let bluetoothDevice;
-    let printCharacteristic;
 
     // Datos de configuración
     const especiesList = [
@@ -269,22 +268,6 @@
             opt.text = cal;
             selCalidad.appendChild(opt);
         });
-        
-        if (navigator.bluetooth && navigator.bluetooth.getDevices) {
-            navigator.bluetooth.getDevices().then(devices => {
-                const myPrinter = devices.find(d => d.name === 'MTH-L1081-13E2');
-                if (myPrinter) {
-                    myPrinter.gatt.connect()
-                    .then(server => server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb'))
-                    .then(service => service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb'))
-                    .then(characteristic => {
-                        printCharacteristic = characteristic;
-                        bluetoothDevice = myPrinter;
-                        console.log("✅ Impresora reconectada automáticamente");
-                    });
-                }
-            });
-        }
     };
 
     function cargarInventario() {
@@ -296,22 +279,6 @@
         .catch(e => console.error("Error cargando inventario para validación:", e));
     }
     
-    // --- BLUETOOTH ---
-    async function conectarBluetooth() {
-        try {
-            bluetoothDevice = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
-            });
-            const server = await bluetoothDevice.gatt.connect();
-            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-            printCharacteristic = await service.getCharacteristic('00002af1-0000-
-            alert("✅ Conectado a " + bluetoothDevice.name);
-        } catch (error) {
-            console.log("Cancelado o Error: " + error);
-        }
-    }
-
     async function imprimirEtiquetaActual() {
         if (!printCharacteristic) { await conectarBluetooth(); if (!printCharacteristic) return; }
 
