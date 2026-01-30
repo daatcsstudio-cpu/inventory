@@ -550,7 +550,7 @@
                 ancho: anchoGlobal,
                 especie: document.getElementById('especie').value,
                 detalles: [...currentDetalles], // Copia del array
-                m2: totalMetros.toFixed(2), // Keep name m2 for compatibility, but value can be m2 or ml
+                m2: parseFloat(totalMetros.toFixed(2)), // Enviar como número para asegurar formato correcto en BD
                 unidad: unidad
             };
 
@@ -565,7 +565,6 @@
             }
 
             // --- SINCRONIZACIÓN CON GOOGLE SHEETS ---
-            
             // Enviar el objeto fardo completo.
             fetch(GOOGLE_SCRIPT_URL, {
                 method: "POST",

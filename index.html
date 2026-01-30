@@ -488,11 +488,11 @@
                     });
 
                     // Actualizar Tarjetas
-                    document.getElementById('total-barnizado').innerText = totalBarnizadoM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
-                    document.getElementById('total-crudo').innerText = totalCrudoM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
-                    document.getElementById('total-tranquilla').innerText = totalTranquillaML.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ml";
-                    document.getElementById('total-deck').innerText = totalDeckM2.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
-                    document.getElementById('total-aserrada').innerText = totalPiesTablares.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " PT";
+                    document.getElementById('total-barnizado').innerText = totalBarnizadoM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
+                    document.getElementById('total-crudo').innerText = totalCrudoM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
+                    document.getElementById('total-tranquilla').innerText = totalTranquillaML.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ml";
+                    document.getElementById('total-deck').innerText = totalDeckM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
+                    document.getElementById('total-aserrada').innerText = totalPiesTablares.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " PT";
 
                     // Renderizar Tabla Pivot Inicial (Sin filtro)
                     renderPivotTable();
@@ -749,7 +749,7 @@
                     btn.innerHTML = `
                         <div class="p-3 bg-emerald-100 text-emerald-700 rounded-full mb-3 group-hover:bg-emerald-600 group-hover:text-white transition-colors"><i data-lucide="tree-pine" class="w-6 h-6"></i></div>
                         <span class="font-bold text-slate-700 text-lg">${esp}</span>
-                        <span class="text-sm text-slate-500 mt-1 font-mono">${speciesMap[esp].toLocaleString('es', {maximumFractionDigits: 2})} PT</span>
+                        <span class="text-sm text-slate-500 mt-1 font-mono">${speciesMap[esp].toLocaleString('en-US', {maximumFractionDigits: 2})} PT</span>
                         <span class="text-xs text-emerald-600 mt-2 font-medium">Ver Reporte Detallado &rarr;</span>
                     `;
                     speciesGrid.appendChild(btn);
@@ -1266,7 +1266,7 @@
                         else if (l <= 7) sum67 += val;
                         else sum8Plus += val;
 
-                        rowHTML += `<td class="px-2 py-2 report-cell">${val > 0 ? val.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>`;
+                        rowHTML += `<td class="px-2 py-2 report-cell">${val > 0 ? val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>`;
                     });
 
                     calidadTotal += rowTotal;
@@ -1274,10 +1274,10 @@
                     grandSum67 += sum67;
                     grandSum8Plus += sum8Plus;
 
-                    rowHTML += `<td class="px-2 py-2 font-bold bg-emerald-50 text-emerald-800 border-l border-emerald-200">${sum35.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`;
-                    rowHTML += `<td class="px-2 py-2 font-bold bg-emerald-50 text-emerald-800 border-l border-emerald-200">${sum67.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`;
-                    rowHTML += `<td class="px-2 py-2 font-bold bg-emerald-50 text-emerald-800">${sum8Plus.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`;
-                    rowHTML += `<td class="px-2 py-2 font-black bg-emerald-100 text-emerald-900 border-l border-emerald-300">${rowTotal.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`;
+                    rowHTML += `<td class="px-2 py-2 font-bold bg-emerald-50 text-emerald-800 border-l border-emerald-200">${sum35.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`;
+                    rowHTML += `<td class="px-2 py-2 font-bold bg-emerald-50 text-emerald-800 border-l border-emerald-200">${sum67.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`;
+                    rowHTML += `<td class="px-2 py-2 font-bold bg-emerald-50 text-emerald-800">${sum8Plus.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`;
+                    rowHTML += `<td class="px-2 py-2 font-black bg-emerald-100 text-emerald-900 border-l border-emerald-300">${rowTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`;
                     rowHTML += `</tr>`;
                     tbody.innerHTML += rowHTML;
                 });
@@ -1288,7 +1288,7 @@
 
             // 5. Footer (Totales Generales)
             const tfoot = document.getElementById('report-foot');
-            tfoot.innerHTML = `<tr class="report-total-row text-white bg-emerald-900"><td colspan="2" class="px-4 py-3 text-right text-lg">TOTAL GENERAL PT</td>${largos.map(l => `<td class="px-2 py-3">${colTotals[l].toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`).join('')}<td class="px-2 py-3 bg-emerald-800">${grandSum35.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 bg-emerald-800">${grandSum67.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 bg-emerald-800">${grandSum8Plus.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 text-xl bg-emerald-950 text-yellow-400">${grandTotal.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>`;
+            tfoot.innerHTML = `<tr class="report-total-row text-white bg-emerald-900"><td colspan="2" class="px-4 py-3 text-right text-lg">TOTAL GENERAL PT</td>${largos.map(l => `<td class="px-2 py-3">${colTotals[l].toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>`).join('')}<td class="px-2 py-3 bg-emerald-800">${grandSum35.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 bg-emerald-800">${grandSum67.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 bg-emerald-800">${grandSum8Plus.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td class="px-2 py-3 text-xl bg-emerald-950 text-yellow-400">${grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>`;
         }
 
         // --- LÓGICA DE LOGIN Y SALUDOS ---
