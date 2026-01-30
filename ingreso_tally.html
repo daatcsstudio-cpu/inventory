@@ -118,7 +118,7 @@
 <div class="container">
     <h2>📝 Ingreso de Tallys</h2>
     <div id="btStatus">Estado: Desconectado</div>
-    <button class="btn-bt" onclick="conectarBluetooth()">📡 CONECTAR IMPRESORA (Bluetooth)</button>
+    <button class="btn-bt" onclick="conectarBluetooth()">📡 Conectar Impresora BT</button>
 
     <div class="card">
         <h3>Encabezado del Bulto</h3>
@@ -271,7 +271,28 @@
         });
         
         if (navigator.bluetooth && navigator.bluetooth.getDevices) {
-            navigator.bluetooth.getDevices().then(devices => { if (devices.length > 0) conectarBluetooth(true); });
+            navigator.bluetooth.getDevices().then(devices => { 
+                const myPrinter = devices.find(d => d.name.includes('MTH') || d.name.includes('Printer'));
+                if (myPrinter) {
+                    myPrinter.gatt.connect()
+                    .then(async server => {
+                        let characteristic;
+                        try {
+                            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                            characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                        } catch (e) {
+                            const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+                            characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
+                        }
+                        return characteristic;
+                    })
+                    .then(characteristic => {
+                        printCharacteristic = characteristic;
+                        bluetoothDevice = myPrinter;
+                        document.getElementById('btStatus').innerText = "✅ Impresora reconectada";
+                    });
+                }
+            });
         }
     };
 
@@ -285,50 +306,28 @@
     }
     
     // --- BLUETOOTH ---
-    async function conectarBluetooth(silent = false) {
-        const statusDiv = document.getElementById('btStatus');
-        const btn = document.querySelector('.btn-bt');
-        const originalText = btn ? btn.innerText : "Conectar";
-        if(!silent && statusDiv) statusDiv.innerText = "⏳ Buscando...";
-        
+    async function conectarBluetooth() {
         try {
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
-                optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb']
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
             });
-            
-            const server = await bluetoothDevice.gatt.connect();
-            
-            let characteristic;
 
-            // Intentar servicio MHT directamente (ff00)
+            const server = await bluetoothDevice.gatt.connect();
+
+            let characteristic;
             try {
-                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-                characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-            } catch (e) {
                 const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
                 characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+            } catch (e) {
+                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+                characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
             }
-
-            if (!characteristic) throw new Error("No se encontró servicio de impresión compatible.");
 
             printCharacteristic = characteristic;
-            
-            if(statusDiv) { statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; statusDiv.style.color = "#27ae60"; }
-            
-            if(!silent && btn) {
-                btn.innerText = "✅ Conectado";
-                btn.style.backgroundColor = "#27ae60";
-                alert("¡Conectado a " + bluetoothDevice.name + "!");
-            }
+            alert("✅ Conectado a " + bluetoothDevice.name);
         } catch (error) {
-            if(statusDiv) { statusDiv.innerText = "❌ Desconectado"; statusDiv.style.color = "red"; }
-            if(!silent && btn) {
-                btn.innerText = "❌ Error";
-                btn.style.backgroundColor = "#e74c3c";
-                setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = ""; }, 3000);
-                alert("Error al conectar: " + error + "\n\nAsegúrate de usar Bluefy y tener el Bluetooth encendido.");
-            }
+            console.log("Cancelado o Error: " + error);
         }
     }
 
@@ -364,15 +363,11 @@
 
         const encoder = new TextEncoder();
         const encodedData = encoder.encode(cmd);
-        const CHUNK_SIZE = 20;
+        const CHUNK_SIZE = 50;
         for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
             const chunk = encodedData.slice(i, i + CHUNK_SIZE);
-            if (printCharacteristic.properties.writeWithoutResponse) {
-                await printCharacteristic.writeValueWithoutResponse(chunk);
-            } else {
-                await printCharacteristic.writeValue(chunk);
-            }
-            await new Promise(r => setTimeout(r, 100));
+            await printCharacteristic.writeValue(chunk);
+            await new Promise(r => setTimeout(r, 20));
         }
         alert("✅ Enviado");
     }

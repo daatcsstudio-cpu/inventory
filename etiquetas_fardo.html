@@ -72,7 +72,7 @@
 
 <div class="container">
     <h2>🏷️ Etiquetas de Fardo (Profesional)</h2>
-    <button id="btnConnect" class="btn-bt" onclick="conectarBluetooth()">📡 Conectar Impresora Meitong</button>
+    <button id="btnConnect" class="btn-bt" onclick="conectarBluetooth()">📡 Conectar Impresora BT</button>
     
     <div id="status">Esperando conexión...</div>
 
@@ -89,10 +89,6 @@
 </div>
 
 <script>
-    // Configuración exacta para MHT-L1081
-    const PRINTER_SERVICE_UUID = '0000ff00-0000-1000-8000-00805f9b34fb';
-    const PRINTER_CHARACTERISTIC_UUID = '0000ff02-0000-1000-8000-00805f9b34fb';
-
     let bluetoothDevice;
     let printCharacteristic;
     let fardosDelLote = [];
@@ -127,31 +123,26 @@
     ];
 
     async function conectarBluetooth() {
-        const statusDiv = document.getElementById('status');
-        const btn = document.getElementById('btnConnect');
-
         try {
-            statusDiv.innerText = "⏳ Buscando dispositivo...";
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
-                optionalServices: [PRINTER_SERVICE_UUID, '000018f0-0000-1000-8000-00805f9b34fb']
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
             });
 
-            statusDiv.innerText = "🔗 Conectando...";
             const server = await bluetoothDevice.gatt.connect();
-            const service = await server.getPrimaryService(PRINTER_SERVICE_UUID);
-            printCharacteristic = await service.getCharacteristic(PRINTER_CHARACTERISTIC_UUID);
 
-            statusDiv.innerText = "✅ Conectado a: " + bluetoothDevice.name;
-            statusDiv.style.color = "green";
-            btn.innerText = "✅ Impresora Lista";
-            btn.style.backgroundColor = "#27ae60";
-            btn.style.color = "white";
-
+            let characteristic;
+            try {
+                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+            } catch (e) {
+                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+                characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
+            }
+            printCharacteristic = characteristic;
+            alert("✅ Conectado a " + bluetoothDevice.name);
         } catch (error) {
-            console.error(error);
-            statusDiv.innerText = "❌ Error: " + error.message;
-            statusDiv.style.color = "red";
+            console.log("Cancelado o Error: " + error);
         }
     }
 

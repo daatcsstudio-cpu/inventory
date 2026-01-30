@@ -141,7 +141,7 @@
 <body>
     <div class="container">
         <h2 class="no-print">🏷️ Imprimir Etiquetas (Aserrada)</h2>
-        <button class="btn-bt no-print" onclick="conectarBluetooth()">📡 CONECTAR IMPRESORA BLUETOOTH (Bluefy)</button>
+        <button class="btn-bt no-print" onclick="conectarBluetooth()">📡 Conectar Impresora BT</button>
         
         <div class="card no-print">
             <div id="status">Conectando...</div>
@@ -211,11 +211,20 @@
             // Intentar reconexión automática (Chrome/Bluefy)
             if (navigator.bluetooth && navigator.bluetooth.getDevices) {
                 navigator.bluetooth.getDevices().then(devices => {
-                    const myPrinter = devices.find(d => d.name === 'MTH-L1081-13E2');
+                    const myPrinter = devices.find(d => d.name.includes('MTH') || d.name.includes('Printer'));
                     if (myPrinter) {
                         myPrinter.gatt.connect()
-                        .then(server => server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb'))
-                        .then(service => service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb'))
+                        .then(async server => {
+                            let characteristic;
+                            try {
+                                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                                characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                            } catch (e) {
+                                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+                                characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
+                            }
+                            return characteristic;
+                        })
                         .then(characteristic => {
                             printCharacteristic = characteristic;
                             bluetoothDevice = myPrinter;
@@ -395,25 +404,27 @@
 
         // --- Lógica Bluetooth (Web Bluetooth API) ---
         async function conectarBluetooth() {
-            const statusDiv = document.getElementById('status');
-            if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
-
             try {
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
                 });
-                
+
                 const server = await bluetoothDevice.gatt.connect();
-                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                
-                if(statusDiv) {
-                    statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name;
+
+                let characteristic;
+                try {
+                    const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                    characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                } catch (e) {
+                    const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+                    characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
                 }
-                alert("¡Conectado a " + bluetoothDevice.name + "!");
+
+                printCharacteristic = characteristic;
+                alert("✅ Conectado a " + bluetoothDevice.name);
             } catch (error) {
-                console.error(error);
+                console.log("Cancelado o Error: " + error);
             }
         }
 
