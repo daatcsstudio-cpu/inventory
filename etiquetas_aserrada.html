@@ -211,7 +211,7 @@
             // Intentar reconexión automática (Chrome/Bluefy)
             if (navigator.bluetooth && navigator.bluetooth.getDevices) {
                 navigator.bluetooth.getDevices().then(devices => {
-                    const myPrinter = devices.find(d => d.name && (d.name.includes('MTH') || d.name.includes('Printer')));
+                    const myPrinter = devices.find(d => d.name && (d.name.includes('MHT') || d.name.includes('Printer')));
                     if (myPrinter) {
                         myPrinter.gatt.connect()
                         .then(server => server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb'))
@@ -397,15 +397,17 @@
         async function conectarBluetooth() {
             const statusDiv = document.getElementById('status');
             if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
+            const btn = document.querySelector('button.btn-bt');
+            const originalText = btn ? btn.innerText : "Conectar";
 
             try {
-                // Solicitar dispositivo (acepta todos para encontrar la MTH)
+                // Solicitar dispositivo (filtros específicos para MHT)
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+                    filters: [{ namePrefix: 'MHT' }, { namePrefix: 'Printer' }, { namePrefix: 'MPT' }],
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
                 });
                 
-                btn.innerText = "🔗 Vinculando...";
+                if(btn) btn.innerText = "🔗 Vinculando...";
                 const server = await bluetoothDevice.gatt.connect();
                 
                 let characteristic;
@@ -430,8 +432,10 @@
                     statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name;
                     statusDiv.style.color = "green";
                 }
-                btn.innerText = "✅ Conectado";
-                btn.style.backgroundColor = "#27ae60";
+                if(btn) {
+                    btn.innerText = "✅ Conectado";
+                    btn.style.backgroundColor = "#27ae60";
+                }
                 alert("¡Conectado a " + bluetoothDevice.name + "!");
             } catch (error) {
                 console.error(error);
@@ -439,9 +443,11 @@
                     statusDiv.innerText = "❌ Error de conexión"; 
                     statusDiv.style.color = "red"; 
                 }
-                btn.innerText = "❌ Error";
-                btn.style.backgroundColor = "#e74c3c";
-                setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = ""; }, 3000);
+                if(btn) {
+                    btn.innerText = "❌ Error";
+                    btn.style.backgroundColor = "#e74c3c";
+                    setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = ""; }, 3000);
+                }
                 alert("Error al conectar: " + error + "\n\nAsegúrate de usar Bluefy y tener el Bluetooth encendido.");
             }
         }
@@ -506,7 +512,12 @@
                 const encodedData = encoder.encode(cmd);
                 const CHUNK_SIZE_SAFE = 20; // Usar 20 bytes para seguridad
                 for (let i = 0; i < encodedData.length; i += CHUNK_SIZE_SAFE) {
-                    await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE_SAFE));
+                    const chunk = encodedData.slice(i, i + CHUNK_SIZE_SAFE);
+                    if (printCharacteristic.properties.writeWithoutResponse) {
+                        await printCharacteristic.writeValueWithoutResponse(chunk);
+                    } else {
+                        await printCharacteristic.writeValue(chunk);
+                    }
                     await new Promise(resolve => setTimeout(resolve, 80));
                 }
                 await new Promise(resolve => setTimeout(resolve, 500)); // Pausa entre etiquetas

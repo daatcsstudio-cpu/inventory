@@ -70,13 +70,14 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
 
     // --- ENVIAR A LA IMPRESORA (Chunking) ---
     const encodedData = encoder.encode(cmd);
-    const CHUNK_SIZE = 50;
+    const CHUNK_SIZE = 20; // Límite de MTU para BLE en iOS
     for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
-        if (printCharacteristic.properties.write) {
-            await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
+        const chunk = encodedData.slice(i, i + CHUNK_SIZE);
+        if (printCharacteristic.properties.writeWithoutResponse) {
+            await printCharacteristic.writeValueWithoutResponse(chunk);
         } else {
-            await printCharacteristic.writeValueWithoutResponse(encodedData.slice(i, i + CHUNK_SIZE));
+            await printCharacteristic.writeValue(chunk);
         }
-        await new Promise(resolve => setTimeout(resolve, 20));
+        await new Promise(resolve => setTimeout(resolve, 50)); // Pausa para evitar saturación del buffer
     }
 }

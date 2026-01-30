@@ -779,54 +779,41 @@
         btn.style.backgroundColor = "#f39c12"; // Naranja
 
         try {
-            const device = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+            bluetoothDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ namePrefix: 'MHT' }, { namePrefix: 'Printer' }, { namePrefix: 'MPT' }],
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
             });
             
             btn.innerText = "🔗 Vinculando...";
-            const server = await device.gatt.connect();
+            const server = await bluetoothDevice.gatt.connect();
             
             let characteristic;
 
-            // Intentar obtener servicios conocidos
-            const services = await server.getPrimaryServices();
-            
-            for (const service of services) {
-                try {
-                    const characteristics = await service.getCharacteristics();
-                    // Buscar característica de escritura
-                    const candidate = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
-                    if (candidate) {
-                        characteristic = candidate;
-                        break;
-                    }
-                } catch (e) { console.log("Error leyendo características del servicio " + service.uuid); }
-            }
-
-            // Fallback manual si el loop anterior falla (a veces getPrimaryServices no devuelve todo en iOS)
-            if (!characteristic) {
+            // 1. Intentar primero con el servicio MHT (ff00) - Prioridad para MTH-L1081
             try {
                 const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
                 characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-                } catch (e) {}
-            }
-            
+                // Forzar modo sin respuesta para MHT si está disponible
+                if (characteristic.properties.writeWithoutResponse) {
+                    console.log("Usando modo Write Without Response para MHT");
+                }
+            } catch (e) { console.log("MHT service not found, trying standard..."); }
+
+            // 2. Si falla, intentar con el servicio estándar
             if (!characteristic) {
                 try {
                     const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
                     characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                } catch (e) {}
+                } catch (e) { console.log("Standard service not found."); }
             }
 
             if (!characteristic) throw new Error("No se encontró servicio de impresión compatible.");
 
             printCharacteristic = characteristic;
-            bluetoothDevice = device;
             
             btn.innerText = "✅ Conectado";
             btn.style.backgroundColor = "#27ae60"; // Verde
-            alert("¡Conectado a " + device.name + "!");
+            alert("¡Conectado a " + bluetoothDevice.name + "!");
         } catch (error) {
             console.error(error);
             btn.innerText = "❌ Error";

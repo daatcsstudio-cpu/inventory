@@ -286,14 +286,16 @@
     
     // --- BLUETOOTH ---
     async function conectarBluetooth(silent = false) {
-        const status = document.getElementById('btStatus');
-        if(!silent) status.innerText = "⏳ Buscando...";
+        const statusDiv = document.getElementById('btStatus');
+        const btn = document.querySelector('.btn-bt');
+        const originalText = btn ? btn.innerText : "Conectar";
+        if(!silent && statusDiv) statusDiv.innerText = "⏳ Buscando...";
         
         try {
-            // Solicitar dispositivo (acepta todos para encontrar la MTH)
+            // Solicitar dispositivo (filtros específicos para MHT)
             bluetoothDevice = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+                filters: [{ namePrefix: 'MHT' }, { namePrefix: 'Printer' }, { namePrefix: 'MPT' }],
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
             });
             
             const server = await bluetoothDevice.gatt.connect();
@@ -316,17 +318,16 @@
 
             printCharacteristic = characteristic;
             
-            statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name;
-            statusDiv.style.color = "#27ae60";
+            if(statusDiv) { statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; statusDiv.style.color = "#27ae60"; }
             
-            if(!silent) {
+            if(!silent && btn) {
                 btn.innerText = "✅ Conectado";
                 btn.style.backgroundColor = "#27ae60";
                 alert("¡Conectado a " + bluetoothDevice.name + "!");
             }
         } catch (error) {
-            statusDiv.innerText = "❌ Desconectado"; statusDiv.style.color = "red";
-            if(!silent) {
+            if(statusDiv) { statusDiv.innerText = "❌ Desconectado"; statusDiv.style.color = "red"; }
+            if(!silent && btn) {
                 btn.innerText = "❌ Error";
                 btn.style.backgroundColor = "#e74c3c";
                 setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = ""; }, 3000);
