@@ -1,8 +1,8 @@
 /**
  * Función compartida para imprimir etiquetas de Producto Terminado (4x3 pulgadas)
- * Se usa tanto en registro.html como en etiquetas_fardo.html
+ * Optimizada para impresoras Meitong y navegadores Web Bluetooth (Bluefy)
  */
-async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
+async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = false) {
     if (!printCharacteristic) {
         throw new Error("Impresora no conectada");
     }
@@ -10,43 +10,40 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
     const encoder = new TextEncoder();
     let cmd = "";
 
-    // --- CONFIGURACIÓN DE LA ETIQUETA (4x3 pulgadas) ---
-    cmd += "SIZE 4,3\r\n"; 
-    cmd += "GAP 0.12,0\r\n";
+    // --- CONFIGURACIÓN DE LA ETIQUETA ---
+    // Ajustado según Self-test de la MHT-L1081
+    cmd += "SIZE 101 mm, 76 mm\r\n"; 
+    cmd += "GAP 3 mm, 0 mm\r\n";
     cmd += "DIRECTION 1\r\n";
     cmd += "CLS\r\n";
     cmd += "DENSITY 12\r\n";
 
-    // --- CÓDIGO DE BARRAS (Fardo No) ---
-    // BARCODE x,y,"type",height,human_readable,rotation,narrow,wide,"content"
+    // --- CÓDIGO DE BARRAS ---
+    // Ajustado a x=60 para que no se corte en el margen izquierdo
     cmd += `BARCODE 60,20,"128",60,1,0,3,3,"${fardo.fardoNo}"\r\n`;
     
     // --- ENCABEZADOS ---
-    // TEXT x,y,"font",rotation,x-mul,y-mul,alignment,"content"
-    // Alignment 2 = Centrado
-    cmd += `TEXT 300,125,"3",0,1,1,2,"Lote: ${fardo.lote}"\r\n`;
-    cmd += `TEXT 350,45,"3",0,1,1,2,"Fardo: ${fardo.fardoNo}  -  ${fardo.m2} M2"\r\n`;
+    // Nota: La fuente "3" es estándar, pero "TUV.TTF" o "ROMAN.TTF" suelen verse mejor
+    cmd += `TEXT 400,125,"3",0,1,1,2,"Lote: ${fardo.lote}"\r\n`;
+    cmd += `TEXT 400,45,"3",0,1,1,2,"Fardo: ${fardo.fardoNo} - ${fardo.m2} M2"\r\n`;
 
-    cmd += `BAR 40,155,720,2\r\n`; // Línea separadora
+    cmd += `BAR 40,155,720,3\r\n`; // Línea más gruesa (3) para mejor visibilidad
 
     // --- DETALLES DEL PRODUCTO ---
-    cmd += `TEXT 266,175,"3",0,1,1,2,"${fardo.producto}"\r\n`;
-    cmd += `TEXT 206,210,"3",0,1,1,2,"${fardo.grosor} x ${fardo.ancho} pulg  -  ${fardo.especie}"\r\n`;
+    cmd += `TEXT 400,175,"3",0,1,1,2,"${fardo.producto}"\r\n`;
+    cmd += `TEXT 400,210,"3",0,1,1,2,"${fardo.grosor} x ${fardo.ancho} pulg - ${fardo.especie}"\r\n`;
 
-    cmd += `BAR 40,240,720,2\r\n`; // Línea separadora
+    cmd += `BAR 40,240,720,3\r\n`;
 
     // --- TABLA DE PIEZAS ---
-    // Encabezados de columnas
     cmd += `TEXT 60,260,"3",0,1,1,"LARGO"\r\n`;
-    cmd += `TEXT 314,260,"3",0,1,1,"PIEZAS"\r\n`;
+    cmd += `TEXT 350,260,"3",0,1,1,"PIEZAS"\r\n`;
     cmd += `TEXT 650,260,"3",0,1,1,"M2"\r\n`;
 
-    // Filas de la tabla
-    let y = 290;
+    let y = 295;
     if (fardo.detalles && fardo.detalles.length > 0) {
         fardo.detalles.forEach(d => {
-            if (y < 500) { // Evitar que se salga de la etiqueta
-                // Cálculo de M2 por línea si no viene pre-calculado
+            if (y < 510) { 
                 const m2_linea = d.piezas * (d.largo * 0.3048) * (fardo.ancho * 0.0254);
                 
                 cmd += `TEXT 60,${y},"3",0,1,1,"${d.largo}"\r\n`;
@@ -56,28 +53,37 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
             }
         });
     } else {
-        cmd += `TEXT 300,350,"3",0,1,1,"(Detalle no disponible)"\r\n`;
+        cmd += `TEXT 400,350,"3",0,1,1,2,"(Detalle no disponible)"\r\n`;
     }
 
     // --- TOTALES ---
-    cmd += `BAR 40,510,720,2\r\n`; // Línea final
+    cmd += `BAR 40,515,720,3\r\n`;
     
     const totalPzs = fardo.detalles ? fardo.detalles.reduce((acc, d) => acc + d.piezas, 0) : 0;
-    cmd += `TEXT 158,540,"3",0,1,1,"TOTAL PIEZAS: ${totalPzs > 0 ? totalPzs : '-'}"\r\n`;
-    cmd += `TEXT 532,540,"3",0,1,1,3,"TOTAL: ${fardo.m2} M2"\r\n`; // Align 3 = Derecha
+    cmd += `TEXT 60,540,"3",0,1,1,"TOTAL PIEZAS: ${totalPzs > 0 ? totalPzs : '-'}"\r\n`;
+    cmd += `TEXT 760,540,"3",0,1,1,3,"TOTAL: ${fardo.m2} M2"\r\n`;
 
     cmd += "PRINT 1,1\r\n";
 
-    // --- ENVIAR A LA IMPRESORA (Chunking) ---
+    // --- ENVIAR A LA IMPRESORA (Chunking Optimizado) ---
     const encodedData = encoder.encode(cmd);
-    const CHUNK_SIZE = 20; // Límite de MTU para BLE en iOS
+    
+    /* IMPORTANTE: Bluefy y Meitong funcionan mejor con chunks de 20 bytes 
+       y un delay pequeño para no desbordar el búfer de la impresora.
+    */
+    const CHUNK_SIZE = 20; 
     for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
         const chunk = encodedData.slice(i, i + CHUNK_SIZE);
-        if (printCharacteristic.properties.writeWithoutResponse) {
+        try {
+            // Priorizamos writeWithoutResponse para evitar bloqueos en iOS
             await printCharacteristic.writeValueWithoutResponse(chunk);
-        } else {
+        } catch (e) {
+            // Fallback en caso de que la característica no soporte el modo anterior
             await printCharacteristic.writeValue(chunk);
         }
-        await new Promise(resolve => setTimeout(resolve, 100)); // Pausa aumentada para estabilidad en MHT
+        // Delay de 30ms es suficiente para Meitong; 100ms puede ser muy lento para etiquetas grandes
+        await new Promise(resolve => setTimeout(resolve, 30)); 
     }
+
+    if (!silent) alert("Etiqueta enviada a " + fardo.fardoNo);
 }

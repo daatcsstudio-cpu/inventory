@@ -46,7 +46,7 @@
         
         <div style="margin-top: 15px;">
             <label style="font-weight: bold; font-size: 14px;">Comando TSPL Manual:</label>
-            <textarea id="rawCommand">SIZE 4,3&#13;&#10;GAP 0.12,0&#13;&#10;CLS&#13;&#10;TEXT 100,100,"3",0,1,1,"PRUEBA EXITOSA"&#13;&#10;PRINT 1,1&#13;&#10;</textarea>
+            <textarea id="rawCommand">SIZE 101 mm, 76 mm&#13;&#10;GAP 3 mm, 0 mm&#13;&#10;DIRECTION 1&#13;&#10;CLS&#13;&#10;TEXT 50,50,"3",0,2,2,"JOSE CORADO"&#13;&#10;BARCODE 50,150,"128",100,1,0,3,3,"202406180640"&#13;&#10;PRINT 1,1&#13;&#10;</textarea>
             <button class="btn-raw" onclick="enviarRaw()">ENVIAR COMANDO CRUDO</button>
         </div>
     </div>
@@ -96,7 +96,12 @@
             try {
                 writeLog("Iniciando conexión para impresión...");
                 deviceGlobal = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'MHT' }, { namePrefix: 'Printer' }, { namePrefix: 'MPT' }],
+                    filters: [
+                        { name: 'MHT-L1081-13E2-B' },
+                        { namePrefix: 'MHT' }, 
+                        { namePrefix: 'Printer' }, 
+                        { namePrefix: 'MPT' }
+                    ],
                     optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb']
                 });
                 const server = await deviceGlobal.gatt.connect();
