@@ -94,32 +94,64 @@
         async function conectarYProbar() {
             const statusTag = document.getElementById('bt-status-tag');
             try {
-                writeLog("Iniciando conexión para impresión...");
+                writeLog("Iniciando búsqueda de impresora...");
                 deviceGlobal = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'MHT' }],
-                    optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb']
+                    acceptAllDevices: true,
+                    optionalServices: [
+                        '0000ff00-0000-1000-8000-00805f9b34fb', 
+                        '000018f0-0000-1000-8000-00805f9b34fb'
+                    ]
                 });
                 
-                writeLog(`Conectando a: ${deviceGlobal.name}`);
+                writeLog(`Conectando a: ${deviceGlobal.name || 'Dispositivo'}`);
                 const server = await deviceGlobal.gatt.connect();
-                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-                characteristicGlobal = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
+                
+                writeLog("Buscando servicios de impresión...");
+                let service, characteristic;
+
+                // Intento 1: Servicio FF00 (Estándar MHT)
+                try {
+                    service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+                    characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
+                    writeLog("✅ Servicio FF00 detectado.");
+                } catch (e) {
+                    writeLog("⚠️ FF00 no disponible, intentando 18F0...");
+                    // Intento 2: Servicio 18F0 (Alternativo)
+                    service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                    characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                    writeLog("✅ Servicio 18F0 detectado.");
+                }
+
+                characteristicGlobal = characteristic;
 
                 statusTag.innerText = "CONECTADO";
                 statusTag.className = "status-tag status-on";
-                writeLog("✅ Impresora lista para pruebas.");
+                writeLog("🚀 Enviando etiqueta de prueba...");
 
                 const tspl = 
                   'SIZE 101 mm, 76 mm\r\n' +
                   'GAP 3 mm, 0 mm\r\n' +
+                  'DIRECTION 1\r\n' +
                   'CLS\r\n' +
-                  'TEXT 50,50,"ROMAN.TTF",0,2,2,"JOSE CORADO"\r\n' +
-                  'BARCODE 50,150,"128",100,1,0,3,3,"GIBOR-001"\r\n' + 
+                  'TEXT 50,50,"3",0,2,2,"PRUEBA GIBOR"\r\n' +
+                  'BARCODE 50,150,"128",100,1,0,3,3,"TEST-12345"\r\n' + 
                   'PRINT 1,1\r\n';
 
                 const data = new TextEncoder().encode(tspl);
-                await characteristicGlobal.writeValueWithoutResponse(data);
-                writeLog("🚀 Ticket de prueba enviado.");
+                
+                // Chunking para evitar bloqueos en Bluefy/iOS
+                const CHUNK = 20;
+                for (let i = 0; i < data.length; i += CHUNK) {
+                    const chunk = data.slice(i, i + CHUNK);
+                    if (characteristicGlobal.properties.writeWithoutResponse) {
+                        await characteristicGlobal.writeValueWithoutResponse(chunk);
+                    } else {
+                        await characteristicGlobal.writeValue(chunk);
+                    }
+                    await new Promise(r => setTimeout(r, 50));
+                }
+                
+                writeLog("✅ Ticket enviado con éxito.");
 
             } catch (error) {
                 writeLog(`❌ Error: ${error.message}`);
