@@ -172,11 +172,11 @@
         // Intentar reconexión automática (Chrome/Bluefy)
         if (navigator.bluetooth && navigator.bluetooth.getDevices) {
             navigator.bluetooth.getDevices().then(devices => {
-                const myPrinter = devices.find(d => d.name.includes('MTH') || d.name.includes('Printer'));
+                const myPrinter = devices.find(d => d.name.includes('MHT') || d.name.includes('Printer'));
                 if (myPrinter) {
                     myPrinter.gatt.connect()
-                    .then(server => server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb'))
-                    .then(service => service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb'))
+                    .then(server => server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb'))
+                    .then(service => service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb'))
                     .then(characteristic => {
                         printCharacteristic = characteristic;
                         bluetoothDevice = myPrinter;

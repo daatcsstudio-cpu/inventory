@@ -19,7 +19,7 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
 
     // --- CÓDIGO DE BARRAS (Fardo No) ---
     // BARCODE x,y,"type",height,human_readable,rotation,narrow,wide,"content"
-    cmd += `BARCODE 60,20,"128",80,1,0,2,4,"${fardo.fardoNo}"\r\n`;
+    cmd += `BARCODE 60,20,"128",60,1,0,3,3,"${fardo.fardoNo}"\r\n`;
     
     // --- ENCABEZADOS ---
     // TEXT x,y,"font",rotation,x-mul,y-mul,alignment,"content"
@@ -78,6 +78,6 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
         } else {
             await printCharacteristic.writeValue(chunk);
         }
-        await new Promise(resolve => setTimeout(resolve, 50)); // Pausa para evitar saturación del buffer
+        await new Promise(resolve => setTimeout(resolve, 100)); // Pausa aumentada para estabilidad en MHT
     }
 }
