@@ -396,20 +396,26 @@
         // --- Lógica Bluetooth (Web Bluetooth API) ---
         async function conectarBluetooth() {
             const statusDiv = document.getElementById('status');
-            if(statusDiv) statusDiv.innerText = "⏳ Buscando impresora
+            if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
+
             try {
                 // Al usar acceptAllDevices, iOS mostrará la lista de dispositivos sí o sí
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                  Sv
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+                });
                 
                 if(statusDiv) statusDiv.innerText = "🔗 Sincronizando con " + bluetoothDevice.name;
                 
-                const server = await bluetoothDevice.gatervice('000018f0-0000-1000-8000-00805f9b34fb');
+                const server = await bluetoothDevice.gatt.connect();
+                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
                 printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                
                 if(statusDiv) { 
                     statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; 
-                    statusDiv.style.color = "green"; N
+                    statusDiv.style.color = "green"; 
+                }
+                alert("✅ ¡CONECTADO!\nAhora puedes imprimir las etiquetas de la cola.");
 
             } catch (error) {
                 console.log("Error en Bluefy:", error);
@@ -418,7 +424,9 @@
                     statusDiv.style.color = "red"; 
                 }
                 // Esta alerta te dirá exactamente por qué falló en el iPhone
-          s er.ge)
+                alert("⚠️ No se pudo conectar: " + error.message);
+            }
+        }
 
         async function imprimirColaBluetooth() {
             if (!printCharacteristic) {
@@ -489,3 +497,4 @@
         }
     </script>
 </body>
+</html>
