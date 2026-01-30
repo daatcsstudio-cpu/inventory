@@ -161,12 +161,15 @@
                 <button onclick="toggleSidebar()" class="text-slate-600 focus:outline-none p-2 hover:bg-gray-100 rounded-md">
                     <i data-lucide="menu" class="w-6 h-6"></i>
                 </button>
-                <span id="mobile-title" class="font-bold text-slate-800 text-lg">Inicio</span>
-                <div class="w-10"></div> <!-- Espaciador para centrar título visualmente -->
+                <nx <span id="user-greeting-mobile" class="text-xs text-blue-600 font-medium"></span>
+                </div>
+                <div class="w-10"></div>
             </header>
 
             <!-- Área de Contenido -->
-            <main class="flex-1 overflow-hidden bg-gray-50 relative">
+            <main class="flex-1 overflow-hidden bg-gray-50 relative flex flex-col">
+                <div id="desktop-greefont-semibold text-slate-700"></span>
+                </div>
                 
                 <!-- VISTA INICIO (Dashboard Stats) -->
                 <div id="view-home" class="h-full overflow-y-auto p-4 lg:p-8 fade-in">
@@ -366,6 +369,21 @@
                     <tfoot id="report-foot" class="sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]"></tfoot>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA DE LOGIN -->
+    <div id="login-screen" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-slate-800">Acceso al Sistema</h1>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="user-login" placeholder="Usuario" class="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="pass-login" placeholder="Contraseña" class="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="intentarLogin()" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">Entrar</button>
+            </div>
+            <p id="login-error" class="text-red-500 text-sm mt-4 hidden text-center">Credenciales incorrectas</p>
         </div>
     </div>
 
