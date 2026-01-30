@@ -382,6 +382,7 @@
                 '000018f0-0000-1000-8000-00805f9b34fb', 
                 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', 
                 '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+                '0000ff00-0000-1000-8000-00805f9b34fb',
                 '734e665b-eb21-4061-bdb3-2d55ce395bbe'
             ];
 
@@ -401,6 +402,21 @@
                     printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
                     if (printCharacteristic) break;
                 } catch (e) {}
+            }
+
+            // Fallback: Descubrimiento automático
+            if (!printCharacteristic) {
+                try {
+                    const services = await server.getPrimaryServices();
+                    for (const service of services) {
+                        const characteristics = await service.getCharacteristics();
+                        printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
+                        if (printCharacteristic) {
+                            alert("✅ Servicio descubierto: " + service.uuid);
+                            break;
+                        }
+                    }
+                } catch(e) {}
             }
 
             if (!printCharacteristic) throw new Error("Servicio de impresión no encontrado.");

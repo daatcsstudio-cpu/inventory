@@ -160,6 +160,10 @@
     let printCharacteristic;
 
     window.onload = function() {
+        if (typeof imprimirEtiquetaTerminado === 'undefined') {
+            alert("⚠️ ERROR CRÍTICO: No se cargó el archivo 'formato_etiqueta_producto_terminado.js'.");
+        }
+
         cargarDatos();
         document.getElementById('loteInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') buscarLote();
@@ -342,6 +346,7 @@
     // --- Lógica de Impresión ---
 
 async function conectarBluetooth() {
+    alert("🔵 Iniciando conexión Bluetooth...");
     const statusDiv = document.getElementById('status');
     if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
 
@@ -351,6 +356,7 @@ async function conectarBluetooth() {
             '000018f0-0000-1000-8000-00805f9b34fb', 
             'e7810a71-73ae-499d-8c15-faa9aef0c3f2', 
             '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+            '0000ff00-0000-1000-8000-00805f9b34fb',
             '734e665b-eb21-4061-bdb3-2d55ce395bbe'
         ];
 
@@ -360,19 +366,40 @@ async function conectarBluetooth() {
         });
         
         if(statusDiv) statusDiv.innerText = "🔗 Sincronizando con " + bluetoothDevice.name;
+        alert("🔗 Conectando a " + bluetoothDevice.name + "...");
         
         const server = await bluetoothDevice.gatt.connect();
+        let characteristic;
         
         for (const sUuid of serviciosOpcionales) {
             try {
                 const service = await server.getPrimaryService(sUuid);
                 const characteristics = await service.getCharacteristics();
-                printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
-                if (printCharacteristic) break;
+                characteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
+                if (characteristic) {
+                    alert("✅ Servicio encontrado: " + sUuid);
+                    break;
+                }
             } catch (e) {}
         }
         
-        if (!printCharacteristic) throw new Error("Servicio de impresión no encontrado.");
+        // Fallback: Descubrimiento automático
+        if (!characteristic) {
+            try {
+                const services = await server.getPrimaryServices();
+                for (const service of services) {
+                    const characteristics = await service.getCharacteristics();
+                    characteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
+                    if (characteristic) {
+                        alert("✅ Servicio descubierto: " + service.uuid);
+                        break;
+                    }
+                }
+            } catch(e) {}
+        }
+
+        if (!characteristic) throw new Error("Servicio de impresión no encontrado.");
+        printCharacteristic = characteristic;
         
         if(statusDiv) { 
             statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; 

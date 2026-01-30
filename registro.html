@@ -319,6 +319,10 @@
 
     // Cargar datos guardados al iniciar la página
     window.onload = function() {
+        if (typeof imprimirEtiquetaTerminado === 'undefined') {
+            alert("⚠️ ERROR CRÍTICO: No se cargó el archivo 'formato_etiqueta_producto_terminado.js'. Verifica tu conexión a internet o que el archivo exista.");
+        }
+
         const guardado = localStorage.getItem('inventario_fardos');
         if (guardado) {
             fardosData = JSON.parse(guardado);
@@ -884,7 +888,8 @@
                 '000018f0-0000-1000-8000-00805f9b34fb', // Estándar TSPL
                 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Impresoras Chinas / MPT-II
                 '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Feasycom
-                '734e665b-eb21-4061-bdb3-2d55ce395bbe'  // Tu Impresora
+                '0000ff00-0000-1000-8000-00805f9b34fb', // Meihengtong / MHT
+                '734e665b-eb21-4061-bdb3-2d55ce395bbe'  // Tu UUID específico
             ];
 
             if (!device) {
