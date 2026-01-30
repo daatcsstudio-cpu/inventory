@@ -360,7 +360,7 @@ async function conectarBluetooth() {
         
         let characteristic;
 
-        // 1. MHT (Prioridad)
+        // 1. MHT
         try {
             const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
             characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
@@ -368,10 +368,8 @@ async function conectarBluetooth() {
 
         // 2. Estándar
         if (!characteristic) {
-            try {
-                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-            } catch (e) {}
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
         }
 
         printCharacteristic = characteristic;

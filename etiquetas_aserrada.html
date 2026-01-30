@@ -395,8 +395,13 @@
 
         // --- Lógica Bluetooth (Web Bluetooth API) ---
         async function conectarBluetooth() {
+            const btn = document.querySelector('button[onclick="conectarBluetooth()"]');
             const statusDiv = document.getElementById('status');
-            if(statusDiv) statusDiv.innerText = "⏳ Buscando impresoras cercanas...";
+            const originalText = btn.innerText;
+
+            btn.innerText = "⏳ Conectando...";
+            btn.style.backgroundColor = "#f39c12";
+            if(statusDiv) statusDiv.innerText = "⏳ Buscando...";
 
             try {
                 // Solicitar dispositivo (acepta todos para encontrar la MTH)
@@ -405,6 +410,7 @@
                     optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
                 });
                 
+                btn.innerText = "🔗 Vinculando...";
                 const server = await bluetoothDevice.gatt.connect();
                 
                 let characteristic;
@@ -429,6 +435,8 @@
                     statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; 
                     statusDiv.style.color = "green"; 
                 }
+                btn.innerText = "✅ Conectado";
+                btn.style.backgroundColor = "#27ae60";
                 alert("¡Conectado a " + bluetoothDevice.name + "!");
             } catch (error) {
                 console.error(error);
@@ -436,6 +444,9 @@
                     statusDiv.innerText = "❌ Error de conexión"; 
                     statusDiv.style.color = "red"; 
                 }
+                btn.innerText = "❌ Error";
+                btn.style.backgroundColor = "#e74c3c";
+                setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = ""; }, 3000);
                 alert("Error al conectar: " + error + "\n\nAsegúrate de usar Bluefy y tener el Bluetooth encendido.");
             }
         }

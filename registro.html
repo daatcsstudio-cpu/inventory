@@ -164,6 +164,7 @@
     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
         <button class="btn-bt" onclick="conectarBluetooth()" style="margin-bottom:0; flex: 1;">📡 Conectar BT</button>
         <button id="btnAutoPrint" class="btn-bt" onclick="toggleAutoPrint()" style="margin-bottom:0; flex: 1; background-color: #2ecc71; color: white;">🖨️ Auto: ON</button>
+        <button class="btn-bt" onclick="imprimirTest()" style="margin-bottom:0; width: 60px; background-color: #34495e; color: white;">🛠️</button>
     </div>
 
     <div class="card">
@@ -821,6 +822,23 @@
         } catch (error) {
             alert("Error enviando datos: " + error);
             conectarBluetooth();
+        }
+    }
+
+    async function imprimirTest() {
+        if (!printCharacteristic) {
+            await conectarBluetooth();
+            if (!printCharacteristic) return;
+        }
+        try {
+            const encoder = new TextEncoder();
+            const cmd = "SIZE 4,2\r\nCLS\r\nTEXT 50,50,\"3\",0,1,1,\"TEST MHT-L1081\"\r\nPRINT 1,1\r\n";
+            const data = encoder.encode(cmd);
+            if (printCharacteristic.properties.write) await printCharacteristic.writeValue(data);
+            else await printCharacteristic.writeValueWithoutResponse(data);
+            alert("✅ Test enviado");
+        } catch (e) {
+            alert("❌ Error test: " + e.message);
         }
     }
 </script>
