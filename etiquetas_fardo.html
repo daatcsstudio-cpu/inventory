@@ -341,21 +341,25 @@
 
     // --- Lógica de Impresión ---
 
-    async function conectarBluetooth() {
-        try {
-            bluetoothDevice = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
-            });
-            const server = await bluetoothDevice.gatt.connect();
-            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-            printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-            alert("✅ Conectado a " + bluetoothDevice.name);
-        } catch (error) {
-            console.log(error);
-            alert("No se pudo conectar. Intenta de nuevo.");
-        }
+async function conectarBluetooth() {
+    alert("Buscando impresora... Selecciona tu dispositivo en la lista."); // Aviso previo
+    try {
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+        });
+        
+        const server = await bluetoothDevice.gatt.connect();
+        alert("🔗 Sincronizando servicios..."); // Aviso de progreso
+        
+        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+        printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+        
+        alert("✅ ¡CONECTADO! Ya puedes imprimir.");
+    } catch (error) {
+        alert("⚠️ Conexión cancelada o fallida: " + error.message);
     }
+}
 
     async function imprimirFardoIndividual(index) {
         if (!printCharacteristic) {

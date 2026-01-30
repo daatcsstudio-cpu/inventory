@@ -814,30 +814,22 @@
 
     // --- Lógica Bluetooth (Web Bluetooth API) ---
     async function conectarBluetooth() {
-        const SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
-        const CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
-
+        alert("Buscando impresora... Selecciona tu dispositivo en la lista."); // Aviso previo
         try {
-            console.log("Solicitando dispositivo...");
             bluetoothDevice = await navigator.bluetooth.requestDevice({
-                // Es mejor filtrar por el servicio directamente para que Bluefy sea más preciso
-                filters: [{ services: [SERVICE_UUID] }],
-                optionalServices: [SERVICE_UUID]
+                acceptAllDevices: true,
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
             });
             
-            console.log("Conectando al servidor GATT...");
             const server = await bluetoothDevice.gatt.connect();
+            alert("🔗 Sincronizando servicios..."); // Aviso de progreso
             
-            console.log("Obteniendo servicio...");
-            const service = await server.getPrimaryService(SERVICE_UUID);
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
             
-            console.log("Obteniendo característica...");
-            printCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-            
-            alert("✅ Conectado exitosamente a: " + bluetoothDevice.name);
+            alert("✅ ¡CONECTADO! Ya puedes imprimir.");
         } catch (error) {
-            console.error("Error detallado:", error);
-            alert("Error al conectar: " + error.message);
+            alert("⚠️ Conexión cancelada o fallida: " + error.message);
         }
     }
 

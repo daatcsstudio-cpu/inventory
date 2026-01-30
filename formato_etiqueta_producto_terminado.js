@@ -71,11 +71,28 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo) {
 
     cmd += "PRINT 1,1\r\n";
 
-    // --- ENVIAR A LA IMPRESORA (Chunking) ---
-    const encodedData = encoder.encode(cmd);
-    const CHUNK_SIZE = 20; // Reducido a 20 bytes para compatibilidad total con Bluefy/iOS
-    for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
-        await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
-        await new Promise(resolve => setTimeout(resolve, 50)); // Mayor pausa para evitar saturación
+    // --- ENVIAR A LA IMPRESORA (Chunking con Reporte de Estado) ---
+    try {
+        const encodedData = encoder.encode(cmd);
+        const CHUNK_SIZE = 20; 
+        
+        // Calculamos cuántos trozos vamos a enviar para dar un progreso
+        const totalChunks = Math.ceil(encodedData.length / CHUNK_SIZE);
+        console.log(`Iniciando impresión: ${totalChunks} paquetes de datos.`);
+
+        for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
+            await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+
+        // Si llega aquí, es que terminó de enviar todo sin errores
+        alert("✅ Datos enviados. Imprimiendo...");
+
+    } catch (error) {
+        console.error("Error de impresión:", error);
+        alert("❌ Error al imprimir: " + error.message);
+        
+        // Tip extra: Si falla, a veces es porque la conexión se cerró
+        printCharacteristic = null; 
     }
 }
