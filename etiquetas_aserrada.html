@@ -402,14 +402,26 @@
                 // Solicitar dispositivo (acepta todos para encontrar la MTH)
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] // Servicio estándar de impresoras
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
                 });
                 
                 const server = await bluetoothDevice.gatt.connect();
-                // Intentamos obtener el servicio de impresión estándar
-                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                // Característica de escritura estándar
-                printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                
+                let service, characteristic;
+
+                // 1. Estándar
+                try {
+                    service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                    characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                } catch (e) {}
+
+                // 2. MHT
+                if (!characteristic) {
+                    service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+                    characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
+                }
+
+                printCharacteristic = characteristic;
                 
                 if(statusDiv) { 
                     statusDiv.innerText = "✅ Conectado: " + bluetoothDevice.name; 
