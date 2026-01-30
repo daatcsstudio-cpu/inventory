@@ -401,11 +401,8 @@
             const originalText = btn ? btn.innerText : "Conectar";
 
             try {
-                // Solicitar dispositivo con nombre exacto del Selftest
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
-                    filters: [
-                        { name: 'MHT-L1081-13E2-B' }
-                    ],
+                    acceptAllDevices: true,
                     optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb']
                 });
                 
@@ -467,9 +464,9 @@
 
             for (const item of printQueue) {
                 let cmd = "";
-                // Configuración 4x3 pulgadas
-                cmd += "SIZE 4,3\r\n"; 
-                cmd += "GAP 0.12,0\r\n";
+                // Configuración 101x76mm (según Selftest)
+                cmd += "SIZE 101 mm, 76 mm\r\n"; 
+                cmd += "GAP 3 mm, 0 mm\r\n";
                 cmd += "DIRECTION 1\r\n";
                 cmd += "CLS\r\n";
                 cmd += "DENSITY 8\r\n";

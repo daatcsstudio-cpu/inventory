@@ -292,11 +292,8 @@
         if(!silent && statusDiv) statusDiv.innerText = "⏳ Buscando...";
         
         try {
-            // Solicitar dispositivo con nombre exacto del Selftest
             bluetoothDevice = await navigator.bluetooth.requestDevice({
-                filters: [
-                    { name: 'MHT-L1081-13E2-B' }
-                ],
+                acceptAllDevices: true,
                 optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb']
             });
             
@@ -352,7 +349,7 @@
         const espCode = espObj ? espObj.codigo : "GEN";
         const idCode = `MD-${poa}-${fardo}-${espCode}`;
 
-        let cmd = "SIZE 4,3\r\nGAP 0.12,0\r\nCLS\r\nDENSITY 8\r\n";
+        let cmd = "SIZE 101 mm, 76 mm\r\nGAP 3 mm, 0 mm\r\nCLS\r\nDENSITY 8\r\n";
         cmd += `TEXT 40,30,"3",0,1,1,"MADERA ASERRADA"\r\n`;
         cmd += `TEXT 500,20,"3",0,3,3,"#${fardo}"\r\n`;
         cmd += `BARCODE 120,90,"128",80,1,0,2,4,"${idCode}"\r\n`;

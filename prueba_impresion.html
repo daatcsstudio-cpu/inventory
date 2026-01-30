@@ -96,32 +96,30 @@
             try {
                 writeLog("Iniciando conexión para impresión...");
                 deviceGlobal = await navigator.bluetooth.requestDevice({
-                    filters: [
-                        { name: 'MHT-L1081-13E2-B' }
-                    ],
-                    optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb']
+                    filters: [{ namePrefix: 'MHT' }],
+                    optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb']
                 });
-                const server = await deviceGlobal.gatt.connect();
-                await new Promise(r => setTimeout(r, 800));
                 
-                // Intentar obtener la característica de escritura de Meihengtong
-                let service;
-                try {
-                    service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-                    characteristicGlobal = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-                } catch(e) {
-                    service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                    characteristicGlobal = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                }
+                writeLog(`Conectando a: ${deviceGlobal.name}`);
+                const server = await deviceGlobal.gatt.connect();
+                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+                characteristicGlobal = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
 
                 statusTag.innerText = "CONECTADO";
                 statusTag.className = "status-tag status-on";
                 writeLog("✅ Impresora lista para pruebas.");
 
-                // Enviar una etiqueta de prueba usando el formato oficial
-                const fardoTest = { lote: "TEST-001", fardoNo: "999", m2: "10.00", producto: "PRUEBA DIAGNÓSTICO", grosor: "1", ancho: "5", especie: "TEST", detalles: [{piezas: 5, largo: 8}] };
-                await imprimirEtiquetaTerminado(characteristicGlobal, fardoTest, true);
-                writeLog("🚀 Etiqueta de prueba enviada.");
+                const tspl = 
+                  'SIZE 101 mm, 76 mm\r\n' +
+                  'GAP 3 mm, 0 mm\r\n' +
+                  'CLS\r\n' +
+                  'TEXT 50,50,"ROMAN.TTF",0,2,2,"JOSE CORADO"\r\n' +
+                  'BARCODE 50,150,"128",100,1,0,3,3,"GIBOR-001"\r\n' + 
+                  'PRINT 1,1\r\n';
+
+                const data = new TextEncoder().encode(tspl);
+                await characteristicGlobal.writeValueWithoutResponse(data);
+                writeLog("🚀 Ticket de prueba enviado.");
 
             } catch (error) {
                 writeLog(`❌ Error: ${error.message}`);

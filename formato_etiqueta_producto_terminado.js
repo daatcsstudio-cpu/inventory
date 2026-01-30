@@ -23,9 +23,9 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
     cmd += `BARCODE 60,20,"128",60,1,0,3,3,"${fardo.fardoNo}"\r\n`;
     
     // --- ENCABEZADOS ---
-    // Nota: La fuente "3" es estándar, pero "TUV.TTF" o "ROMAN.TTF" suelen verse mejor
-    cmd += `TEXT 400,125,"3",0,1,1,2,"Lote: ${fardo.lote}"\r\n`;
-    cmd += `TEXT 400,45,"3",0,1,1,2,"Fardo: ${fardo.fardoNo} - ${fardo.m2} M2"\r\n`;
+    // Usamos ROMAN.TTF para una apariencia más profesional y legible
+    cmd += `TEXT 400,125,"ROMAN.TTF",0,1,1,2,"Lote: ${fardo.lote}"\r\n`;
+    cmd += `TEXT 400,45,"ROMAN.TTF",0,2,2,2,"Fardo: ${fardo.fardoNo} - ${fardo.m2} M2"\r\n`;
 
     cmd += `BAR 40,155,720,3\r\n`; // Línea más gruesa (3) para mejor visibilidad
 
