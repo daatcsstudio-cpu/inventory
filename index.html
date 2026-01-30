@@ -668,6 +668,7 @@
                 homeView.classList.remove('hidden');
                 frameContainer.classList.add('hidden');
                 frame.src = ''; // Limpiar iframe para ahorrar memoria
+                loadDashboardData(); // Recargar datos al volver al inicio
             } else {
                 homeView.classList.add('hidden');
                 frameContainer.classList.remove('hidden');

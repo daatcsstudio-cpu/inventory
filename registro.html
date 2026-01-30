@@ -185,7 +185,10 @@
 <div class="container">
     <h2>Registro de Inventario</h2>
     
-    <button class="btn-bt" onclick="conectarBluetooth()">📡 Conectar Impresora BT</button>
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <button class="btn-bt" onclick="conectarBluetooth()" style="margin-bottom:0; flex: 1;">📡 Conectar BT</button>
+        <button id="btnAutoPrint" class="btn-bt" onclick="toggleAutoPrint()" style="margin-bottom:0; flex: 1; background-color: #2ecc71; color: white;">🖨️ Auto: ON</button>
+    </div>
 
     <div class="card">
         <div class="grid-3">
@@ -307,6 +310,7 @@
     let bluetoothDevice;
     let printCharacteristic;
     let selectedPiezas = 1; // Valor por defecto para botones rápidos
+    let autoPrint = true; // Estado inicial de impresión automática
 
     function handleProductChange() {
         // El ancho ahora es necesario para todos los productos
@@ -326,7 +330,14 @@
         
         // Eventos para entrada rápida con Enter
         document.getElementById('newPiezas').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') document.getElementById('newLargo').focus();
+            if (e.key === 'Enter') {
+                // Si el campo está vacío y ya hay detalles, Guardar Fardo (Funcionalidad de Doble Enter)
+                if (this.value.trim() === "" && currentDetalles.length > 0) {
+                    agregarFardo();
+                } else {
+                    document.getElementById('newLargo').focus();
+                }
+            }
         });
 
         document.getElementById('newLargo').addEventListener('keypress', function (e) {
@@ -361,6 +372,20 @@
         // Render inicial
         actualizarLista();
     };
+
+    function toggleAutoPrint() {
+        autoPrint = !autoPrint;
+        const btn = document.getElementById('btnAutoPrint');
+        if(autoPrint) {
+            btn.innerText = "🖨️ Auto: ON";
+            btn.style.backgroundColor = "#2ecc71"; // Verde
+            btn.style.color = "white";
+        } else {
+            btn.innerText = "🖨️ Auto: OFF";
+            btn.style.backgroundColor = "#95a5a6"; // Gris
+            btn.style.color = "white";
+        }
+    }
 
     function cargarInventarioRemoto() {
         fetch(GOOGLE_SCRIPT_URL)
@@ -567,10 +592,12 @@
             localStorage.setItem('last_fardo', inputFardo.value);
             
             // Intentar imprimir (protegido contra errores para no detener el flujo)
-            try {
-                imprimir(fardosData.length - 1); 
-            } catch(e) {
-                console.error("Error al imprimir:", e);
+            if (autoPrint) {
+                try {
+                    imprimir(fardosData.length - 1); 
+                } catch(e) {
+                    console.error("Error al imprimir:", e);
+                }
             }
         } catch (error) {
             alert("Error CRÍTICO al guardar fardo: " + error.message);
