@@ -661,34 +661,43 @@
         }
 
         function loadView(url, element) {
-            // Actualizar estilos de navegación
-            document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-900/20');
-                el.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
-            });
-            element.classList.remove('text-slate-400', 'hover:bg-slate-800');
-            element.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-900/20');
+    // Actualizar estilos de navegación
+    document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-900/20');
+        el.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+    });
+    element.classList.remove('text-slate-400', 'hover:bg-slate-800');
+    element.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-900/20');
 
-            // Actualizar el título en el header móvil
-            if(mobileTitle) mobileTitle.innerText = element.querySelector('span').innerText;
+    if(mobileTitle) mobileTitle.innerText = element.querySelector('span').innerText;
 
-            // Cerrar sidebar en móvil
-            if (window.innerWidth < 1024) {
-                toggleSidebar();
-            }
+    if (window.innerWidth < 1024) {
+        toggleSidebar();
+    }
 
-            // Lógica de carga
-            if (url === 'home') {
-                homeView.classList.remove('hidden');
-                frameContainer.classList.add('hidden');
-                frame.src = ''; // Limpiar iframe para ahorrar memoria
-                loadDashboardData(); // Recargar datos al volver al inicio
-            } else {
-                homeView.classList.add('hidden');
-                frameContainer.classList.remove('hidden');
-                frame.src = url; // Cargar archivo HTML externo
-            }
-        }
+    // Módulos que requieren Bluetooth (cargar sin iframe)
+    const modulosConBluetooth = ['etiquetas_fardo.html', 'etiqueta_lote.html', 'etiquetas_aserrada.html'];
+    
+    if (modulosConBluetooth.includes(url)) {
+        homeView.classList.add('hidden');
+        frameContainer.classList.add('hidden');
+        
+        // Redirigir a la página directamente
+        window.location.href = url;
+        return;
+    }
+
+    if (url === 'home') {
+        homeView.classList.remove('hidden');
+        frameContainer.classList.add('hidden');
+        frame.src = '';
+        loadDashboardData();
+    } else {
+        homeView.classList.add('hidden');
+        frameContainer.classList.remove('hidden');
+        frame.src = url;
+    }
+}
 
         function openModal(type) {
             const backdrop = document.getElementById('modalBackdrop');
