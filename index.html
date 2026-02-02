@@ -515,96 +515,6 @@
                 });
         }
 
-        function renderPivotTable(filtro = null) {
-            const ptePivot = {};
-            const allDims = new Set();
-            const allSpecies = new Set();
-            
-            // Actualizar título
-            const titleEl = document.getElementById('pivot-table-title');
-            if (titleEl) {
-                // Si hay filtro, mostramos qué estamos viendo. Si no, es el resumen general.
-                // Aclaramos que se muestra solo "Primera" para evitar confusiones.
-                titleEl.innerText = filtro 
-                    ? `Detalle: ${filtro} (Calidad: Primera)` 
-                    : "Resumen Producto Terminado (Calidad: Primera)";
-            }
-
-            globalDataPTE.forEach(row => {
-                const producto = (row['Producto'] || row['PRODUCTO'] || row['Calidad'] || '').toLowerCase();
-                const calidad = (row['Calidad'] || row['CALIDAD'] || '').trim().toLowerCase();
-                
-                const metros = parseFloat(row['M2'] || 0);
-                const unidad = (row['Unidad'] || row['UNIDAD'] || 'm2').toLowerCase();
-                
-                // 1. Filtro de búsqueda (si hiciste clic en una tarjeta específica)
-                if (filtro && !producto.includes(filtro.toLowerCase())) return;
-
-                // 2. FILTRO DE CALIDAD "PRIMERA"
-                // Solo aplicamos este filtro a los productos que lo manejan (Pisos y Deck)
-                if (['barnizado', 'crudo', 'deck'].some(t => producto.includes(t))) {
-                    if (calidad !== 'primera') return; // Si no es primera, saltamos esta fila
-                }
-
-                // Si pasa los filtros, procesamos los datos
-                const esp = row['Especie'] || 'Sin Especie';
-                const grosor = row['Grosor "'] || row['Grosor'];
-                const ancho = row['Ancho "'] || row['Ancho'];
-                
-                if (grosor && ancho && metros > 0 && unidad !== 'ml') { 
-                    const dim = `${grosor} x ${ancho}`;
-                    allDims.add(dim);
-                    allSpecies.add(esp);
-                    
-                    if (!ptePivot[esp]) ptePivot[esp] = {};
-                    if (!ptePivot[esp][dim]) ptePivot[esp][dim] = 0;
-                    ptePivot[esp][dim] += metros;
-                }
-            });
-
-            // Renderizar HTML
-            const sortedDims = Array.from(allDims).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-            const sortedSpecies = Array.from(allSpecies).sort();
-            
-            const thead = document.getElementById('pte-table-head');
-            const tbody = document.getElementById('pte-table-body');
-            const tfoot = document.getElementById('pte-table-foot');
-            
-            if (thead && tbody && tfoot) {
-                let headerHTML = '<tr><th class="px-4 py-2 border-b">Especie</th>';
-                sortedDims.forEach(d => headerHTML += `<th class="px-4 py-2 border-b text-right">${d}</th>`);
-                headerHTML += '<th class="px-4 py-2 border-b text-right bg-gray-100">Total M²</th></tr>';
-                thead.innerHTML = headerHTML;
-
-                let bodyHTML = '';
-                const colTotals = {};
-                sortedDims.forEach(d => colTotals[d] = 0);
-                let grandTotal = 0;
-
-                sortedSpecies.forEach(esp => {
-                    let rowHTML = `<tr class="hover:bg-gray-50 border-b"><td class="px-4 py-2 font-medium">${esp}</td>`;
-                    let rowTotal = 0;
-                    sortedDims.forEach(dim => {
-                        const val = ptePivot[esp][dim] || 0;
-                        rowTotal += val;
-                        colTotals[dim] += val;
-                        rowHTML += `<td class="px-4 py-2 text-right">${val > 0 ? val.toFixed(2) : '-'}</td>`;
-                    });
-                    grandTotal += rowTotal;
-                    rowHTML += `<td class="px-4 py-2 text-right font-bold bg-gray-50">${rowTotal.toFixed(2)}</td></tr>`;
-                    bodyHTML += rowHTML;
-                });
-                tbody.innerHTML = bodyHTML;
-
-                let footerHTML = '<tr><td class="px-4 py-2 border-t">M2 por dimensión</td>';
-                sortedDims.forEach(dim => {
-                    footerHTML += `<td class="px-4 py-2 border-t text-right">${colTotals[dim].toFixed(2)}</td>`;
-                });
-                footerHTML += `<td class="px-4 py-2 border-t text-right bg-gray-100">${grandTotal.toFixed(2)}</td></tr>`;
-                tfoot.innerHTML = footerHTML;
-            }
-        }
-
         async function exportarDatos() {
             const btn = document.querySelector('button[onclick="exportarDatos()"]');
             const originalText = btn.innerHTML;
@@ -728,7 +638,7 @@
         }
 
         function renderModalContent(type) {
-            // Actualizar Título
+            // Actualizar Título (sin mencionar filtros internos)
             const titleEl = document.querySelector('#modalContent h2');
             if(titleEl) titleEl.innerText = `EXISTENCIA DE ${type.toUpperCase()}`;
 
@@ -783,14 +693,14 @@
                 lucide.createIcons();
                 return; // Salir, no renderizar tabla estándar
             } else {
-                // MODO PISO: Mostrar Tabla Estándar FILTRADA
+                // MODO PISO: Mostrar Tabla Estándar (con filtro interno invisible)
                 genericTable.classList.remove('hidden');
                 speciesView.classList.add('hidden');
 
                 // Determinar término de búsqueda según el tipo
                 const term = type.toLowerCase().replace('piso ', ''); // 'barnizado', 'crudo', 'tranquilla', 'deck'
                 
-                // Filtrar datos PTE por tipo de producto Y calidad
+                // Filtrar datos PTE por tipo de producto Y calidad (internamente, sin mostrar al usuario)
                 data = globalDataPTE.filter(d => {
                     const prod = (d['Producto'] || d['Calidad'] || d['PRODUCTO'] || '').toLowerCase();
                     const calidad = (d['Calidad'] || d['CALIDAD'] || '').trim().toLowerCase();
@@ -798,7 +708,7 @@
                     // Verificar si coincide con el tipo de producto
                     const matchesType = prod.includes(term);
                     
-                    // Para productos que usan calidad (barnizado, crudo, deck), filtrar solo Primera
+                    // FILTRO INTERNO: Para barnizado, crudo y deck solo mostrar calidad "primera"
                     if (['barnizado', 'crudo', 'deck'].some(t => term.includes(t))) {
                         return matchesType && calidad === 'primera';
                     }
