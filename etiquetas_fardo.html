@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Etiquetas por Fardo</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <script src="formato_etiqueta_producto_terminado.js"></script>
     <style>
         :root {
             --primary: #1A237E;
@@ -80,7 +83,7 @@
         /* Lista de Fardos */
         .fardo-item {
             display: flex;
-            flex-direction: column; /* Móvil primero */
+            flex-direction: column;
             background: #fff;
             padding: 15px;
             margin-bottom: 15px;
@@ -111,13 +114,13 @@
 
         #results-area { display: none; }
         
-        /* --- ESTILOS DE IMPRESIÓN (Visible solo al imprimir en PC) --- */
+        /* --- ESTILOS DE IMPRESIÓN PC (Solo visible al imprimir desde navegador) --- */
         #printable-area { display: none; }
 
         @media print {
             @page { size: 4in 3in; margin: 0; }
             html, body { margin: 0; padding: 0; background: white; }
-            body * { visibility: hidden; } /* Ocultar todo */
+            body * { visibility: hidden; }
             
             #printable-area, #printable-area * { visibility: visible; }
             #printable-area { 
@@ -130,7 +133,7 @@
             .label-page {
                 width: 4in;
                 height: 3in;
-                page-break-after: always; /* Importante para imprimir múltiples */
+                page-break-after: always;
                 position: relative;
                 box-sizing: border-box;
                 padding: 10px;
@@ -140,10 +143,9 @@
                 border: none;
                 overflow: hidden;
             }
-            /* Última página sin salto extra si es posible (aunque browsers a veces lo ignoran) */
             .label-page:last-child { page-break-after: avoid; }
 
-            /* Diseño interno de la etiqueta (Copia del diseño BT visual) */
+            /* Diseño interno visual de la etiqueta PC */
             .lbl-header { display: flex; width: 100%; border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 5px; }
             .lbl-qr { width: 80px; height: 80px; margin-right: 10px; }
             .lbl-title-box { flex: 1; text-align: left; }
@@ -213,7 +215,6 @@
             if (e.key === 'Enter') buscarLote();
         });
         
-        // Auto-reconexión silenciosa si es posible
         if (navigator.bluetooth && navigator.bluetooth.getDevices) {
             navigator.bluetooth.getDevices().then(devices => {
                 const myPrinter = devices.find(d => d.name === 'MTH-L1081-13E2');
@@ -270,7 +271,6 @@
                 };
             }
 
-            // Datos de piezas y largo para recalculo
             const pzs = parseInt(getVal(['Piezas', 'Total Piezas', 'Pzs'])) || 0;
             const largo = parseFloat(getVal(['Largo', 'Largo_Ft', 'Largo (ft)'])) || 0;
             
@@ -278,17 +278,13 @@
                 agrupado[key].detalles.push({ piezas: pzs, largo: largo });
             }
 
-            // Leer M2 del sheet como base
             const m2Row = parseFloat(getVal(['M2', 'm2', 'M2_Total_Fardo'])) || 0;
             if (m2Row > agrupado[key].m2) agrupado[key].m2 = m2Row;
         });
 
-        // Procesar totales finales
         inventarioAgrupado = Object.values(agrupado).map(f => {
-            // Calcular piezas totales
             f.piezas = f.detalles.reduce((acc, d) => acc + d.piezas, 0);
             
-            // Recalcular M2 si es posible para mayor precisión
             if (f.detalles.length > 0 && f.ancho > 0) {
                 let m2Calc = 0;
                 f.detalles.forEach(d => {
@@ -353,7 +349,7 @@
     }
 
     // ==========================================
-    // LÓGICA DE IMPRESIÓN PC (HTML)
+    // LÓGICA DE IMPRESIÓN PC (HTML/CSS)
     // ==========================================
     
     function crearElementoEtiqueta(f) {
@@ -392,12 +388,11 @@
     function imprimirFardoPC(index) {
         const fardo = fardosDelLote[index];
         const container = document.getElementById('printable-area');
-        container.innerHTML = ""; // Limpiar
+        container.innerHTML = ""; 
         
         const el = crearElementoEtiqueta(fardo);
         container.appendChild(el);
         
-        // Generar QR
         new QRCode(el.querySelector('.lbl-qr'), {
             text: `${fardo.lote}-${fardo.fardoNo}`,
             width: 80, height: 80,
@@ -424,7 +419,7 @@
     }
 
     // ==========================================
-    // LÓGICA DE IMPRESIÓN BLUETOOTH (TSPL)
+    // LÓGICA DE IMPRESIÓN BLUETOOTH (EXTERNA)
     // ==========================================
 
     async function conectarBluetooth() {
@@ -456,7 +451,14 @@
             await conectarBluetooth();
             if (!printCharacteristic) return;
         }
-        await enviarEtiquetaTSPL(fardosDelLote[index]);
+        
+        try {
+            // Llamada a la función del archivo EXTERNO: formato_etiqueta_producto_terminado.js
+            await imprimirEtiquetaTerminado(printCharacteristic, fardosDelLote[index]);
+        } catch (e) {
+            alert("Error al llamar al script externo: " + e);
+            console.error(e);
+        }
     }
 
     async function imprimirTodoBT() {
@@ -468,58 +470,15 @@
         if (!confirm(`¿Imprimir ${fardosDelLote.length} etiquetas por Bluetooth?`)) return;
 
         for (const f of fardosDelLote) {
-            await enviarEtiquetaTSPL(f);
-            await new Promise(r => setTimeout(r, 500)); // Pausa para no saturar buffer
+            try {
+                // Llamada a la función del archivo EXTERNO
+                await imprimirEtiquetaTerminado(printCharacteristic, f);
+                await new Promise(r => setTimeout(r, 500)); 
+            } catch (e) {
+                console.error("Error imprimiendo fardo " + f.fardoNo, e);
+            }
         }
         alert("Impresión finalizada.");
-    }
-
-    async function enviarEtiquetaTSPL(d) {
-        const encoder = new TextEncoder();
-        const medidas = `${d.grosor}" x ${d.ancho}"`;
-        const qrData = `${d.lote}-${d.fardoNo}`;
-
-        let cmd = "";
-        cmd += "SIZE 4,3\r\n";
-        cmd += "GAP 0.12,0\r\n";
-        cmd += "DIRECTION 1\r\n";
-        cmd += "CLS\r\n";
-        
-        // QR Code
-        cmd += `QRCODE 50,50,L,10,A,0,M2,S7,"${qrData}"\r\n`;
-
-        // Textos Header
-        cmd += `TEXT 350,60,"3",0,1,1,"LOTE: ${d.lote}"\r\n`;
-        cmd += `TEXT 350,120,"4",0,1,1,"FARDO #${d.fardoNo}"\r\n`;
-
-        // Textos Cuerpo
-        cmd += `TEXT 400,220,"3",0,1,1,2,"${d.producto}"\r\n`;
-        cmd += `TEXT 400,260,"3",0,1,1,2,"${d.especie}"\r\n`;
-        cmd += `TEXT 400,310,"4",0,1,1,2,"${medidas}"\r\n`;
-
-        // Línea divisoria
-        cmd += `BAR 20,400,760,3\r\n`;
-
-        // Footer
-        cmd += `TEXT 200,420,"2",0,1,1,2,"PIEZAS"\r\n`;
-        cmd += `TEXT 600,420,"2",0,1,1,2,"M2 TOTAL"\r\n`;
-        
-        cmd += `TEXT 200,450,"4",0,1,1,2,"${d.piezas}"\r\n`;
-        cmd += `TEXT 600,450,"4",0,1,1,2,"${d.m2}"\r\n`;
-
-        cmd += "PRINT 1,1\r\n";
-
-        try {
-            const encodedData = encoder.encode(cmd);
-            const CHUNK_SIZE = 100;
-            for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
-                await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
-                await new Promise(resolve => setTimeout(resolve, 30));
-            }
-        } catch (e) {
-            alert("Error Bluetooth: " + e);
-            printCharacteristic = null;
-        }
     }
 </script>
 
