@@ -478,18 +478,24 @@
                     };
 
                     dataPTE.forEach(row => {
-                        const producto = (row['Producto'] || row['Calidad'] || row['PRODUCTO'] || '').toLowerCase();
+                        // Normalizamos nombres para evitar errores por mayúsculas/minúsculas
+                        const producto = (row['Producto'] || row['PRODUCTO'] || row['Calidad'] || '').toLowerCase();
+                        // Leemos la nueva columna 'Calidad' (o CALIDAD)
+                        const calidad = (row['Calidad'] || row['CALIDAD'] || '').trim().toLowerCase(); 
+                        
                         const metros = getNum(row, ['M2', 'm2', 'Metros', 'M2_Total_Fardo', 'M2 ', 'm2 ']);
                         const unidad = (row['Unidad'] || row['UNIDAD'] || 'm2').toLowerCase();
 
+                        // --- LÓGICA DE FILTRADO (SOLO PRIMERA) ---
                         if (producto.includes('crudo')) {
-                            totalCrudoM2 += metros;
+                            // Solo suma si la calidad es "primera"
+                            if (calidad === 'primera') totalCrudoM2 += metros;
                         } else if (producto.includes('barnizado')) {
-                            totalBarnizadoM2 += metros;
+                            if (calidad === 'primera') totalBarnizadoM2 += metros;
                         } else if (producto.includes('deck')) {
-                            totalDeckM2 += metros;
+                            if (calidad === 'primera') totalDeckM2 += metros;
                         } else if (producto.includes('tranquilla')) {
-                            // Sumar si es ML o si es tranquilla (asumimos ML)
+                            // Tranquilla no filtra por calidad, suma todo
                             if (unidad === 'ml' || producto.includes('tranquilla')) totalTranquillaML += metros;
                         }
                     });
@@ -530,32 +536,42 @@
             // Actualizar título
             const titleEl = document.getElementById('pivot-table-title');
             if (titleEl) {
+                // Si hay filtro, mostramos qué estamos viendo. Si no, es el resumen general.
+                // Aclaramos que se muestra solo "Primera" para evitar confusiones.
                 titleEl.innerText = filtro 
-                    ? `Detalle: ${filtro} (M² por Especie y Dimensión)` 
-                    : "Resumen Producto Terminado (M² por Especie y Dimensión)";
+                    ? `Detalle: ${filtro} (Calidad: Primera)` 
+                    : "Resumen Producto Terminado (Calidad: Primera)";
             }
 
             globalDataPTE.forEach(row => {
-                const producto = (row['Producto'] || row['Calidad'] || '').toLowerCase();
-                const metros = parseFloat(row['M2'] || 0);
-                const unidad = (row['Unidad'] || 'm2').toLowerCase();
+                const producto = (row['Producto'] || row['PRODUCTO'] || row['Calidad'] || '').toLowerCase();
+                const calidad = (row['Calidad'] || row['CALIDAD'] || '').trim().toLowerCase();
                 
-                // Filtro
+                const metros = parseFloat(row['M2'] || 0);
+                const unidad = (row['Unidad'] || row['UNIDAD'] || 'm2').toLowerCase();
+                
+                // 1. Filtro de búsqueda (si hiciste clic en una tarjeta específica)
                 if (filtro && !producto.includes(filtro.toLowerCase())) return;
 
-                // Lógica Pivot (Solo M2 para Piso)
+                // 2. FILTRO DE CALIDAD "PRIMERA"
+                // Solo aplicamos este filtro a los productos que lo manejan (Pisos y Deck)
+                if (['barnizado', 'crudo', 'deck'].some(t => producto.includes(t))) {
+                    if (calidad !== 'primera') return; // Si no es primera, saltamos esta fila
+                }
+
+                // Si pasa los filtros, procesamos los datos
                 const esp = row['Especie'] || 'Sin Especie';
                 const grosor = row['Grosor "'] || row['Grosor'];
                 const ancho = row['Ancho "'] || row['Ancho'];
                 
                 if (grosor && ancho && metros > 0 && unidad !== 'ml') { 
-                        const dim = `${grosor} x ${ancho}`;
-                        allDims.add(dim);
-                        allSpecies.add(esp);
-                        
-                        if (!ptePivot[esp]) ptePivot[esp] = {};
-                        if (!ptePivot[esp][dim]) ptePivot[esp][dim] = 0;
-                        ptePivot[esp][dim] += metros;
+                    const dim = `${grosor} x ${ancho}`;
+                    allDims.add(dim);
+                    allSpecies.add(esp);
+                    
+                    if (!ptePivot[esp]) ptePivot[esp] = {};
+                    if (!ptePivot[esp][dim]) ptePivot[esp][dim] = 0;
+                    ptePivot[esp][dim] += metros;
                 }
             });
 
@@ -600,6 +616,7 @@
                 footerHTML += `<td class="px-4 py-2 border-t text-right bg-gray-100">${grandTotal.toFixed(2)}</td></tr>`;
                 tfoot.innerHTML = footerHTML;
             }
+            document.getElementById('pivot-table-container').style.display = 'block';
         }
 
         async function exportarDatos() {
@@ -661,43 +678,43 @@
         }
 
         function loadView(url, element) {
-    // Actualizar estilos de navegación
-    document.querySelectorAll('.nav-item').forEach(el => {
-        el.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-900/20');
-        el.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
-    });
-    element.classList.remove('text-slate-400', 'hover:bg-slate-800');
-    element.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-900/20');
+            // Actualizar estilos de navegación
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-900/20');
+                el.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-white');
+            });
+            element.classList.remove('text-slate-400', 'hover:bg-slate-800');
+            element.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-900/20');
 
-    if(mobileTitle) mobileTitle.innerText = element.querySelector('span').innerText;
+            if(mobileTitle) mobileTitle.innerText = element.querySelector('span').innerText;
 
-    if (window.innerWidth < 1024) {
-        toggleSidebar();
-    }
+            if (window.innerWidth < 1024) {
+                toggleSidebar();
+            }
 
-    // Módulos que requieren Bluetooth (cargar sin iframe)
-    const modulosConBluetooth = ['etiquetas_fardo.html', 'etiqueta_lote.html', 'etiquetas_aserrada.html', 'registro.html'];
-    
-    if (modulosConBluetooth.includes(url)) {
-        homeView.classList.add('hidden');
-        frameContainer.classList.add('hidden');
-        
-        // Redirigir a la página directamente
-        window.location.href = url;
-        return;
-    }
+            // Módulos que requieren Bluetooth (cargar sin iframe)
+            const modulosConBluetooth = ['etiquetas_fardo.html', 'etiqueta_lote.html', 'etiquetas_aserrada.html', 'registro.html'];
+            
+            if (modulosConBluetooth.includes(url)) {
+                homeView.classList.add('hidden');
+                frameContainer.classList.add('hidden');
+                
+                // Redirigir a la página directamente
+                window.location.href = url;
+                return;
+            }
 
-    if (url === 'home') {
-        homeView.classList.remove('hidden');
-        frameContainer.classList.add('hidden');
-        frame.src = '';
-        loadDashboardData();
-    } else {
-        homeView.classList.add('hidden');
-        frameContainer.classList.remove('hidden');
-        frame.src = url;
-    }
-}
+            if (url === 'home') {
+                homeView.classList.remove('hidden');
+                frameContainer.classList.add('hidden');
+                frame.src = '';
+                loadDashboardData();
+            } else {
+                homeView.classList.add('hidden');
+                frameContainer.classList.remove('hidden');
+                frame.src = url;
+            }
+        }
 
         function openModal(type) {
             const backdrop = document.getElementById('modalBackdrop');
