@@ -276,7 +276,7 @@
         const unitLabel = isML ? "ML" : "M2";
 
         fardosLote.forEach(f => {
-            // Intentar leer ML si es producto ML, sino M2
+            // Intentar leer ML si es producto ML, sino  M-2
             let val = isML ? parseFloat(f['ML'] || f['ml'] || f['Ml']) : parseFloat(f['M2'] || f['m2']);
             // Si es ML pero viene vacío (datos viejos), intentar leer M2 como respaldo
             if (isML && isNaN(val)) val = parseFloat(f['M2'] || f['m2']);
