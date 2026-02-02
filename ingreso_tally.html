@@ -8,6 +8,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
     
+    <script src="formato_etiqueta_producto_terminado.js"></script>
+
     <style>
         :root {
             --primary: #1A237E;
@@ -259,8 +261,7 @@
         
         <button class="btn-main" onclick="guardarTally()" style="margin-top: 15px;">💾 Guardar en Nube</button>
     </div>
-    
-    </div>
+</div>
 
 <div id="printable-area"></div>
 
@@ -323,6 +324,7 @@
             selCalidad.appendChild(opt);
         });
 
+        // Auto-reconexión Bluetooth
         if (navigator.bluetooth && navigator.bluetooth.getDevices) {
             navigator.bluetooth.getDevices().then(devices => {
                 const myPrinter = devices.find(d => d.name && (d.name.includes('MTH') || d.name.includes('Printer')));
