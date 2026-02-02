@@ -266,6 +266,7 @@
                     grosor: formatearGrosor(getVal(['Grosor "', 'Grosor', 'grosor'])),
                     ancho: parseFloat(getVal(['Ancho "', 'Ancho', 'ancho'])) || 0,
                     m2: 0,
+                    ml: 0,
                     piezas: 0,
                     detalles: []
                 };
@@ -280,19 +281,33 @@
 
             const m2Row = parseFloat(getVal(['M2', 'm2', 'M2_Total_Fardo'])) || 0;
             if (m2Row > agrupado[key].m2) agrupado[key].m2 = m2Row;
+            
+            const mlRow = parseFloat(getVal(['ML', 'ml', 'Ml'])) || 0;
+            if (mlRow > agrupado[key].ml) agrupado[key].ml = mlRow;
         });
 
         inventarioAgrupado = Object.values(agrupado).map(f => {
             f.piezas = f.detalles.reduce((acc, d) => acc + d.piezas, 0);
             
-            if (f.detalles.length > 0 && f.ancho > 0) {
-                let m2Calc = 0;
+            // Detectar si es ML (Zocalo, Deck, Tranquilla)
+            const prod = (f.producto || '').toLowerCase();
+            const isML = prod.includes('tranquilla') || prod.includes('zocalo') || prod.includes('deck');
+            f.unidad = isML ? 'ML' : 'M2';
+
+            if (f.detalles.length > 0) {
+                let totalCalc = 0;
                 f.detalles.forEach(d => {
-                    m2Calc += d.piezas * (d.largo * 0.3048) * (f.ancho * 0.0254);
+                    if (isML) {
+                        totalCalc += d.piezas * (d.largo * 0.3048); // ML
+                    } else if (f.ancho > 0) {
+                        totalCalc += d.piezas * (d.largo * 0.3048) * (f.ancho * 0.0254); // M2
+                    }
                 });
-                f.m2 = parseFloat(m2Calc.toFixed(2));
+                f.m2 = parseFloat(totalCalc.toFixed(2)); // Usamos f.m2 como contenedor del valor total
             } else {
-                f.m2 = parseFloat(f.m2.toFixed(2));
+                // Si no hay detalles, usar el valor leído de la columna correspondiente
+                const val = isML && f.ml > 0 ? f.ml : f.m2;
+                f.m2 = parseFloat(val.toFixed(2));
             }
             return f;
         });
@@ -337,7 +352,7 @@
                 <div class="fardo-details">
                     <div class="fardo-title">#${f.fardoNo}</div>
                     <div class="fardo-info">${f.producto} <span style="color:#ccc">|</span> ${f.especie}</div>
-                    <div class="fardo-meta">${f.m2} m² • ${f.piezas} pzs</div>
+                    <div class="fardo-meta">${f.m2} ${f.unidad} • ${f.piezas} pzs</div>
                 </div>
                 <div class="fardo-actions">
                     <button class="btn-sm btn-pc-sm" onclick="imprimirFardoPC(${index})">🖥️ PC</button>
@@ -378,7 +393,7 @@
                 </div>
                 <div class="lbl-stat">
                     <div class="lbl-val">${f.m2}</div>
-                    <div class="lbl-txt">M2 TOTAL</div>
+                    <div class="lbl-txt">${f.unidad} TOTAL</div>
                 </div>
             </div>
         `;

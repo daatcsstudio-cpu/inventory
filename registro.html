@@ -563,7 +563,7 @@
             return parseFloat(str);
         };
         const grosorVal = parseFraction(grosorStr);
-        const unidad = (producto === 'Tranquilla') ? 'ml' : 'm2';
+        const unidad = (producto === 'Tranquilla' || producto === 'Zocalo' || producto === 'Deck') ? 'ml' : 'm2';
 
         // --- FORMATO FECHA SIN HORA ---
         const fechaSimple = new Date().toLocaleDateString('es-GT'); 

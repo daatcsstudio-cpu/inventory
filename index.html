@@ -236,7 +236,7 @@
                                     <i data-lucide="layout" class="w-6 h-6"></i>
                                 </div>
                             </div>
-                            <h3 class="text-slate-500 text-sm font-medium">Deck (m²)</h3>
+                            <h3 class="text-slate-500 text-sm font-medium">Deck (ml)</h3>
                             <p id="total-deck" class="text-2xl font-bold text-slate-800 mt-1">Cargando...</p>
                         </div>
 
@@ -464,7 +464,7 @@
                     let totalCrudoM2 = 0;
                     let totalBarnizadoM2 = 0;
                     let totalTranquillaML = 0;
-                    let totalDeckM2 = 0;
+                    let totalDeckML = 0;
                     let totalZocaloML = 0;
 
                     // Helper para obtener valor numérico robusto (busca en varias llaves y limpia comas)
@@ -495,7 +495,9 @@
                         } else if (producto.includes('barnizado')) {
                             if (calidad === 'primera') totalBarnizadoM2 += metros;
                         } else if (producto.includes('deck')) {
-                            if (calidad === 'primera') totalDeckM2 += metros;
+                            // Deck ahora en ML
+                            const valML = getNum(row, ['ML', 'ml', 'Ml']);
+                            if (calidad === 'primera') totalDeckML += (valML > 0) ? valML : metros;
                         } else if (producto.includes('zocalo')) {
                             // Leer columna ML si existe (nuevo script), sino usar M2
                             const valML = getNum(row, ['ML', 'ml', 'Ml']);
@@ -518,7 +520,7 @@
                     document.getElementById('total-barnizado').innerText = totalBarnizadoM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
                     document.getElementById('total-crudo').innerText = totalCrudoM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
                     document.getElementById('total-tranquilla').innerText = totalTranquillaML.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ml";
-                    document.getElementById('total-deck').innerText = totalDeckM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
+                    document.getElementById('total-deck').innerText = totalDeckML.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ml";
                     document.getElementById('total-zocalo').innerText = totalZocaloML.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ml";
                     document.getElementById('total-aserrada').innerText = totalPiesTablares.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " PT";
                 })
@@ -681,6 +683,18 @@
             let unitLabel = 'M²';
             let isAserrada = type === 'Madera Aserrada';
 
+            // Helper local para obtener números (necesario para Zocalo Root)
+            const getNum = (row, keys) => {
+                for (const k of keys) {
+                    if (row[k] !== undefined) {
+                        let val = row[k];
+                        if (typeof val === 'string') val = val.replace(/,/g, '');
+                        return parseFloat(val) || 0;
+                    }
+                }
+                return 0;
+            };
+
             if (isAserrada) {
                 // MODO MADERA ASERRADA: Mostrar Grid de Especies
                 genericTable.classList.add('hidden');
@@ -711,13 +725,54 @@
                 });
                 lucide.createIcons();
                 return; // Salir, no renderizar tabla estándar
+            } else if (type === 'Zocalo') {
+                // MODO ZOCALO ROOT: Mostrar Grid de Estilos
+                genericTable.classList.add('hidden');
+                speciesView.classList.remove('hidden');
+                speciesGrid.innerHTML = '';
+                
+                // Agrupar por Estilo (Calidad)
+                const styleMap = {};
+                globalDataPTE.forEach(row => {
+                    const prod = (row['Producto'] || row['PRODUCTO'] || '').toLowerCase();
+                    if (prod.includes('zocalo')) {
+                        const style = (row['Calidad'] || row['CALIDAD'] || 'Sin Estilo').trim();
+                        // Prioridad ML para Zocalo
+                        const val = getNum(row, ['ML', 'ml', 'Ml']) || getNum(row, ['M2', 'm2', 'Metros']);
+                        // Capitalizar para mostrar bonito
+                        const styleDisplay = style.charAt(0).toUpperCase() + style.slice(1);
+                        styleMap[styleDisplay] = (styleMap[styleDisplay] || 0) + val;
+                    }
+                });
+
+                Object.keys(styleMap).sort().forEach(style => {
+                    const btn = document.createElement('button');
+                    btn.className = "flex flex-col items-center justify-center p-6 bg-white border border-pink-100 rounded-xl shadow-sm hover:shadow-md hover:border-pink-300 hover:bg-pink-50 transition-all duration-200 group";
+                    btn.dataset.species = style.toLowerCase(); // Para que funcione el buscador existente
+                    btn.onclick = () => renderModalContent('Zocalo - ' + style);
+                    btn.innerHTML = `
+                        <div class="p-3 bg-pink-100 text-pink-700 rounded-full mb-3 group-hover:bg-pink-600 group-hover:text-white transition-colors"><i data-lucide="panel-bottom" class="w-6 h-6"></i></div>
+                        <span class="font-bold text-slate-700 text-lg">${style}</span>
+                        <span class="text-sm text-slate-500 mt-1 font-mono">${styleMap[style].toLocaleString('en-US', {maximumFractionDigits: 2})} ML</span>
+                    `;
+                    speciesGrid.appendChild(btn);
+                });
+                lucide.createIcons();
+                return;
             } else {
                 // MODO PISO: Mostrar Tabla Estándar (con filtro interno invisible)
                 genericTable.classList.remove('hidden');
                 speciesView.classList.add('hidden');
 
                 // Determinar término de búsqueda según el tipo
-                const term = type.toLowerCase().replace('piso ', ''); // 'barnizado', 'crudo', 'tranquilla', 'deck'
+                let term = type.toLowerCase().replace('piso ', ''); // 'barnizado', 'crudo', 'tranquilla', 'deck'
+                let specificStyle = null;
+
+                // Manejo especial para Zocalo Detalle
+                if (type.startsWith('Zocalo - ')) {
+                    term = 'zocalo';
+                    specificStyle = type.split(' - ')[1].toLowerCase();
+                }
                 
                 // Filtrar datos PTE por tipo de producto Y calidad (internamente, sin mostrar al usuario)
                 data = globalDataPTE.filter(d => {
@@ -726,6 +781,11 @@
                     
                     // Verificar si coincide con el tipo de producto
                     const matchesType = prod.includes(term);
+
+                    // Si hay un estilo específico (Zocalo), filtrar por él
+                    if (specificStyle) {
+                        return matchesType && calidad === specificStyle;
+                    }
                     
                     // FILTRO INTERNO: Para barnizado, crudo y deck solo mostrar calidad "primera"
                     if (['barnizado', 'crudo', 'deck'].some(t => term.includes(t))) {
@@ -736,7 +796,7 @@
                     return matchesType;
                 });
                 
-                if (type.toLowerCase().includes('tranquilla') || type.toLowerCase().includes('zocalo')) unitLabel = 'ML';
+                if (type.toLowerCase().includes('tranquilla') || type.toLowerCase().includes('zocalo') || type.toLowerCase().includes('deck')) unitLabel = 'ML';
             }
 
             // Agrupar datos

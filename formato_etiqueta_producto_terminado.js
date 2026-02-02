@@ -11,7 +11,7 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
     let cmd = "";
 
     // Detectar unidad (ML o M2)
-    const isML = (fardo.unidad && fardo.unidad.toLowerCase() === 'ml') || (fardo.producto && (fardo.producto.includes('Tranquilla') || fardo.producto.includes('Zocalo')));
+    const isML = (fardo.unidad && fardo.unidad.toLowerCase() === 'ml') || (fardo.producto && (fardo.producto.includes('Tranquilla') || fardo.producto.includes('Zocalo') || fardo.producto.includes('Deck')));
     const unitLabel = isML ? "ML" : "M2";
 
     // --- CONFIGURACIÓN DE LA ETIQUETA ---
