@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inventario - Bluefy Optimizado</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    
     <script src="formato_etiqueta_producto_terminado.js"></script>
     
     <style>
@@ -24,7 +26,7 @@
             padding: 10px;
             color: var(--text-dark);
         }
-        .container { max-width: 100%; }
+        .container { max-width: 100%; margin: 0 auto; }
         h2 { text-align: center; font-size: 1.2rem; color: var(--primary); margin: 10px 0; }
         
         .card {
@@ -74,18 +76,20 @@
         .btn-print { background-color: #fff; border: 2px solid var(--primary); color: var(--primary); }
         .btn-bt { background-color: #e0e6ed; color: var(--text-dark); margin-bottom: 10px; box-shadow: none; }
 
-        #label-template {
-            display: none;
-            width: 100mm;
-            border: 2px solid black;
-            padding: 10px;
-            text-align: center;
+        /* Estilo Botón Volver */
+        .btn-back { 
+            background-color: #e0e6ed; 
+            color: var(--text-dark); 
+            margin-top: 20px; 
+            display: block; 
+            text-align: center; 
+            text-decoration: none; 
+            padding: 15px; 
+            border-radius: 10px; 
+            font-weight: bold; 
+            border: 1px solid #cbd5e1;
         }
-        @media print {
-            body * { visibility: hidden; }
-            #label-template, #label-template * { visibility: visible; }
-            #label-template { position: absolute; left: 0; top: 0; display: block; }
-        }
+        .btn-back:hover { background-color: #cbd5e1; }
 
         .row-item {
             background: #fff;
@@ -247,6 +251,8 @@
         <div id="listaFardos"></div>
         <button class="btn-export" onclick="exportarExcel()">EXPORTAR A EXCEL</button>
     </div>
+
+    <a href="index.html" class="btn-back">⬅ Volver al Dashboard</a>
 </div>
 
 <div id="label-template">
@@ -279,6 +285,11 @@
     let selectedPiezas = 1;
     let autoPrint = true;
 
+    // Utilidad simple para logs
+    function debug(msg, type='info') {
+        console.log(`[${type.toUpperCase()}] ${msg}`);
+    }
+
     function handleProductChange() {
         const anchoInput = document.getElementById('ancho');
         if(anchoInput.value === "0") anchoInput.value = "5"; 
@@ -296,26 +307,9 @@
         // Reconexión automática para MTH-L1081-13E2
         if (navigator.bluetooth && navigator.bluetooth.getDevices) {
             navigator.bluetooth.getDevices().then(devices => {
-                const myPrinter = devices.find(d => d.name.includes('MTH') || d.name.includes('Printer'));
+                const myPrinter = devices.find(d => d.name && (d.name.includes('MTH') || d.name.includes('Printer')));
                 if (myPrinter) {
-                    myPrinter.gatt.connect()
-                    .then(async server => {
-                        let characteristic;
-                        try {
-                            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                            characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                        } catch (e) {
-                            const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-                            characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-                        }
-                        return characteristic;
-                    })
-                    .then(characteristic => {
-                        printCharacteristic = characteristic;
-                        bluetoothDevice = myPrinter;
-                        console.log("✅ Impresora reconectada automáticamente");
-                    })
-                    .catch(e => console.log("No se pudo reconectar auto:", e));
+                    conectarDispositivo(myPrinter);
                 }
             });
         }
@@ -348,12 +342,10 @@
             btn.innerText = "🖨️ Auto: ON";
             btn.style.backgroundColor = "#2ecc71";
             btn.style.color = "white";
-            debug('✅ Impresión automática ACTIVADA', 'success');
         } else {
             btn.innerText = "🖨️ Auto: OFF";
             btn.style.backgroundColor = "#95a5a6";
             btn.style.color = "white";
-            debug('⚠️ Impresión automática DESACTIVADA', 'warning');
         }
     }
 
@@ -805,39 +797,49 @@
                 acceptAllDevices: true,
                 optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
             });
-
-            const server = await bluetoothDevice.gatt.connect();
-
-            let characteristic;
-            try {
-                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-            } catch (e) {
-                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
-                characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-            }
-
-            printCharacteristic = characteristic;
-            alert("✅ Conectado a " + bluetoothDevice.name);
+            conectarDispositivo(bluetoothDevice);
         } catch (error) {
             console.log("Cancelado o Error: " + error);
         }
     }
 
+    async function conectarDispositivo(device) {
+        bluetoothDevice = device;
+        const server = await bluetoothDevice.gatt.connect();
+
+        let characteristic;
+        try {
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+        } catch (e) {
+            const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+            characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
+        }
+
+        printCharacteristic = characteristic;
+        // Feedback visual en el botón de conexión
+        const btn = document.querySelector('.btn-bt');
+        if(btn) {
+            btn.innerText = "✅ Conectado";
+            btn.style.backgroundColor = "#d4edda";
+            btn.style.color = "#155724";
+        }
+    }
+
     async function imprimirBluetooth(index, silent = false) {
         if (!printCharacteristic) {
-            alert("Primero debes conectar la impresora (Botón Gris arriba)");
+            if(!silent) alert("Primero debes conectar la impresora (Botón Gris arriba)");
             return;
         }
 
         const f = fardosData[index];
         
         try {
-            // Usar la función compartida del archivo externo
+            // Llamada al script externo formato_etiqueta_producto_terminado.js
             await imprimirEtiquetaTerminado(printCharacteristic, f, silent);
         } catch (error) {
-            alert("Error enviando datos: " + error);
-            conectarBluetooth();
+            if(!silent) alert("Error enviando datos: " + error);
+            conectarBluetooth(); // Intentar reconectar si falla
         }
     }
 
