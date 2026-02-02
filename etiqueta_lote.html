@@ -262,7 +262,7 @@
         let totalPiezas = 0;
 
         const info = fardosLote[0];
-        const producto = info['Calidad'] || info['Producto'] || '---';
+        const producto = info['Producto'] || info['Calidad'] || '---';
         const especie = info['Especie'] || '---';
         const grosor = formatearGrosor(info['Grosor "'] || info['Grosor'] || '');
         const ancho = info['Ancho "'] || info['Ancho'] || '';
