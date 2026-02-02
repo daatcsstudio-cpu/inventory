@@ -56,6 +56,7 @@
         }
 
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .compact-input { padding: 8px; font-size: 0.9rem; height: 38px; }
 
         button {
@@ -204,10 +205,18 @@
                     <option value="Deck">Deck</option>
                 </select>
             </div>
-            <div>
-                <label>Especie</label>
-                <input type="text" id="especie" value="Manchiche" class="compact-input">
+            <div id="div-calidad" style="display: none;">
+                <label>Calidad</label>
+                <select id="calidad" class="compact-input">
+                    <option value="Primera">Primera</option>
+                    <option value="Segunda">Segunda</option>
+                </select>
             </div>
+        </div>
+        
+        <div style="margin-top: 8px;">
+            <label>Especie</label>
+            <input type="text" id="especie" value="Manchiche" class="compact-input">
         </div>
 
         <hr>
@@ -289,8 +298,19 @@
         console.log(`[${type.toUpperCase()}] ${msg}`);
     }
 
+    // --- MANEJO DE PRODUCTO Y CALIDAD ---
     function handleProductChange() {
+        const prod = document.getElementById('producto').value;
+        const divCalidad = document.getElementById('div-calidad');
         const anchoInput = document.getElementById('ancho');
+
+        // Mostrar Calidad si es Piso o Deck
+        if (prod === 'Piso Barnizado' || prod === 'Piso Crudo' || prod === 'Deck') {
+            divCalidad.style.display = 'block';
+        } else {
+            divCalidad.style.display = 'none';
+        }
+
         if(anchoInput.value === "0") anchoInput.value = "5"; 
     }
 
@@ -327,7 +347,7 @@
         });
 
         renderQuickButtons();
-        handleProductChange();
+        handleProductChange(); // Inicializar estado de calidad
         cargarInventarioRemoto();
         document.getElementById('loteId').addEventListener('input', actualizarLista);
         actualizarLista();
@@ -495,6 +515,13 @@
         const grosorStr = document.getElementById('grosor').value;
         const lote = document.getElementById('loteId').value;
         const fardoNo = document.getElementById('fardoNo').value;
+        
+        // --- CAPTURA DE CALIDAD ---
+        const divCalidad = document.getElementById('div-calidad');
+        let calidad = "";
+        if (divCalidad.style.display !== 'none') {
+            calidad = document.getElementById('calidad').value;
+        }
 
         if(!lote || !fardoNo) {
             alert("Por favor llena el Lote y el No. de Fardo");
@@ -507,7 +534,7 @@
             return;
         }
 
-        // --- VALIDACIÓN 2: CONSISTENCIA DE LOTE (Nuevo) ---
+        // --- VALIDACIÓN 2: CONSISTENCIA DE LOTE (Un lote = Un producto) ---
         const checkConsistencia = verificarConsistenciaLote(lote, producto);
         if (checkConsistencia.error) {
             alert(`⛔ ERROR DE LOTE:\nEl Lote ${lote} ya está registrado como "${checkConsistencia.prod}" (${checkConsistencia.origen}).\nNo puedes mezclar "${producto}" en el mismo lote.`);
@@ -526,7 +553,7 @@
         const unidad = (producto === 'Tranquilla') ? 'ml' : 'm2';
 
         // --- FORMATO FECHA SIN HORA ---
-        const fechaSimple = new Date().toLocaleDateString('es-GT'); // Formato d/m/aaaa
+        const fechaSimple = new Date().toLocaleDateString('es-GT'); 
 
         const filasParaEnviar = [];
         let totalMetrosFardo = 0, totalP2Fardo = 0, totalM3Fardo = 0;
@@ -543,6 +570,7 @@
                 lote: lote,
                 fardoNo: fardoNo,
                 producto: producto,
+                calidad: calidad, // Enviamos la calidad
                 grosor: String(grosorStr).includes('/') ? "'" + grosorStr : grosorStr,
                 ancho: anchoGlobal,
                 especie: document.getElementById('especie').value,
@@ -551,7 +579,7 @@
                 m2: parseFloat(m2_linea.toFixed(3)), ml: parseFloat(ml_linea.toFixed(2)),
                 p2: parseFloat(p2_linea.toFixed(2)), m3: parseFloat(m3_linea.toFixed(4)),
                 unidad: unidad,
-                fecha: fechaSimple // Enviamos la fecha formateada
+                fecha: fechaSimple
             });
 
             totalMetrosFardo += (unidad === 'ml') ? ml_linea : m2_linea;
@@ -569,7 +597,8 @@
             .catch(err => console.error('❌ Error enviando a Sheets: ' + err));
 
         const fardoParaHistorial = {
-            lote: lote, fardoNo: fardoNo, producto: producto, grosor: grosorStr, ancho: anchoGlobal,
+            lote: lote, fardoNo: fardoNo, producto: producto, calidad: calidad,
+            grosor: grosorStr, ancho: anchoGlobal,
             especie: document.getElementById('especie').value, detalles: [...currentDetalles],
             m2: parseFloat(totalMetrosFardo.toFixed(2)),
             p2: parseFloat(totalP2Fardo.toFixed(2)),
@@ -697,10 +726,13 @@
         document.getElementById('ancho').value = f.ancho;
         document.getElementById('especie').value = f.especie;
         
+        // Setear calidad si existe
+        if(f.calidad) document.getElementById('calidad').value = f.calidad;
+        
         currentDetalles = [...f.detalles];
         renderDetalles();
 
-        handleProductChange();
+        handleProductChange(); // Actualizar visibilidad de Calidad
         
         fardosData.splice(index, 1);
         guardarDatosLocales();
@@ -735,7 +767,12 @@
         document.getElementById('printLote').innerText = "Lote: " + f.lote;
         document.getElementById('printFardoM2').innerText = `Fardo: ${f.fardoNo} - ${f.m2} ${unidad}`;
         
-        document.getElementById('printProducto').innerText = `${f.producto} ${f.grosor} x ${f.ancho}"`;
+        // Mostrar calidad en la etiqueta si existe
+        let prodText = `${f.producto}`;
+        if(f.calidad) prodText += ` (${f.calidad})`;
+        prodText += ` ${f.grosor} x ${f.ancho}"`;
+
+        document.getElementById('printProducto').innerText = prodText;
         document.getElementById('printEspecie').innerText = "Especie: " + f.especie;
         
         const colPiezas = document.getElementById('printPiezasCol');
@@ -789,7 +826,6 @@
         });
     }
 
-    // --- ORDEN DE EXPORTACIÓN MODIFICADO ---
     function exportarExcel() {
         if(fardosData.length === 0) return alert("No hay datos para exportar");
         
@@ -797,16 +833,16 @@
         fardosData.forEach(f => {
             f.detalles.forEach(d => {
                 flatData.push({
-                    Lote: f.lote,
-                    Fardo: f.fardoNo,
-                    // ORDEN SOLICITADO: Especie -> Producto -> Calidad (se deja vacía o default)
                     Especie: f.especie,
                     Producto: f.producto,
-                    Calidad: "", // Campo vacío como placeholder para el Sheet
+                    Calidad: f.calidad || "",
+                    Dimensiones: `${f.grosor} x ${f.ancho}`,
+                    Lote: f.lote,
+                    Fardo: f.fardoNo,
                     Grosor: f.grosor,
+                    Ancho_In: f.ancho,
                     Piezas: d.piezas,
                     Largo_Ft: d.largo,
-                    Ancho_In: f.ancho,
                     Metros: f.m2,
                     Unidad: f.unidad
                 });
@@ -820,7 +856,7 @@
         XLSX.writeFile(workbook, `Inventario_Lote_${fardosData[0].lote}.xlsx`);
     }
 
-    // --- Lógica Bluetooth ---
+    // --- Lógica Bluetooth (Web Bluetooth API) ---
     async function conectarBluetooth() {
         try {
             bluetoothDevice = await navigator.bluetooth.requestDevice({
