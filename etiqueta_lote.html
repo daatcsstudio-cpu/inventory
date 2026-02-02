@@ -10,8 +10,8 @@
             --primary: #1A237E;
             --bg: #F5F7F9;
             --text-dark: #2c3e50;
-            --btn-pc: #00897b; /* Color verde azulado para PC */
-            --btn-bt: #2c3e50; /* Color oscuro para BT */
+            --btn-pc: #00897b;
+            --btn-bt: #2c3e50;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -72,11 +72,27 @@
         .btn-print-pc { background-color: var(--btn-pc); color: white; }
         
         .btn-connect { background-color: #e0e6ed; color: var(--text-dark); margin-bottom: 15px; }
-        .btn-back { background-color: #e0e6ed; color: var(--text-dark); margin-top: 20px; display: block; text-align: center; text-decoration: none; padding: 15px; border-radius: 10px; font-weight: bold; }
+        
+        /* ESTILO CORREGIDO PARA EL BOTÓN VOLVER */
+        .btn-back { 
+            background-color: #e0e6ed; 
+            color: var(--text-dark); 
+            margin-top: 20px; 
+            display: block; 
+            text-align: center; 
+            text-decoration: none; 
+            padding: 15px; 
+            border-radius: 10px; 
+            font-weight: bold; 
+            border: 1px solid #cbd5e1;
+        }
+        .btn-back:hover {
+            background-color: #cbd5e1;
+        }
 
         /* Estilos de la Etiqueta (4x3 pulgadas) */
         #label-wrapper {
-            display: none; /* Oculto hasta que se genere */
+            display: none;
             justify-content: center;
             margin-top: 20px;
             flex-direction: column;
@@ -92,13 +108,12 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
-            border: 2px dashed #ccc; /* Borde visual en pantalla */
+            border: 2px dashed #ccc;
             position: relative;
             overflow: hidden;
             margin: 0 auto;
         }
 
-        /* Elementos internos de la etiqueta */
         .lbl-top-row { display: flex; width: 100%; align-items: center; margin-bottom: 5px; border-bottom: 2px solid black; padding-bottom: 5px; }
         .lbl-qr { margin-right: 15px; }
         .lbl-lote-group { text-align: left; flex: 1; overflow: hidden; }
@@ -121,7 +136,6 @@
         .lbl-stat-val { font-size: 1.4rem; font-weight: bold; }
         .lbl-stat-lbl { font-size: 0.7rem; text-transform: uppercase; }
 
-        /* ESTILOS PARA IMPRESIÓN PC (USB/SYSTEM DIALOG) */
         @media print {
             @page { size: 4in 3in; margin: 0mm; }
             html, body { margin: 0; padding: 0; background: white; }
@@ -134,12 +148,10 @@
                 position: fixed;
                 left: 0; top: 0;
                 width: 4in; height: 3in;
-                border: none; /* Quitar borde punteado al imprimir */
+                border: none;
                 margin: 0;
                 box-shadow: none;
             }
-            
-            /* Ocultar botones y otros elementos */
             .btn-print-bt, .btn-print-pc, .container > h2, .card, .btn-back, .btn-connect { display: none; }
         }
     </style>
@@ -188,16 +200,12 @@
         </div>
         
         <div class="actions-grid">
-            <button class="btn-print-pc" onclick="imprimirPC()">
-                🖥️ PC / USB
-            </button>
-            <button class="btn-print-bt" onclick="imprimirBluetooth()">
-                🖨️ Bluetooth
-            </button>
+            <button class="btn-print-pc" onclick="imprimirPC()">🖥️ PC / USB</button>
+            <button class="btn-print-bt" onclick="imprimirBluetooth()">🖨️ Bluetooth</button>
         </div>
     </div>
 
-    <a href="menu_terminado.html" class="btn-back">⬅ Volver al Menú</a>
+    <a href="index.html" class="btn-back">⬅ Volver al Dashboard</a>
 </div>
 
 <script>
@@ -213,7 +221,6 @@
             if (e.key === 'Enter') generarEtiqueta();
         });
         
-        // Intentar reconexión silenciosa (Solo funciona si ya se dieron permisos previamente en Chrome)
         if (navigator.bluetooth && navigator.bluetooth.getDevices) {
             navigator.bluetooth.getDevices().then(devices => {
                 const myPrinter = devices.find(d => d.name === 'MTH-L1081-13E2');
@@ -277,7 +284,6 @@
             m2: totalM2.toFixed(2)
         };
 
-        // Renderizar en HTML
         document.getElementById('printLote').innerText = lote;
         document.getElementById('printProducto').innerText = producto;
         document.getElementById('printEspecie').innerText = especie;
@@ -286,7 +292,6 @@
         document.getElementById('printPiezas').innerText = totalPiezas > 0 ? totalPiezas : "-";
         document.getElementById('printM2').innerText = totalM2.toFixed(2);
 
-        // Generar QR
         const qrContainer = document.getElementById('qrcode');
         qrContainer.innerHTML = "";
         new QRCode(qrContainer, {
@@ -309,13 +314,11 @@
         return valor;
     }
 
-    // --- LÓGICA DE IMPRESIÓN PC ---
     function imprimirPC() {
         if (!currentLabelData) return alert("Primero genera una etiqueta.");
         window.print();
     }
 
-    // --- LÓGICA DE IMPRESIÓN BLUETOOTH ---
     async function imprimirBluetooth() {
         if (!currentLabelData) return alert("Primero genera una etiqueta.");
 
@@ -331,42 +334,28 @@
         const encoder = new TextEncoder();
         let cmd = "";
 
-        // Ajustes TSPL (4x3 pulgadas)
         cmd += "SIZE 4,3\r\n";
         cmd += "GAP 0.12,0\r\n";
         cmd += "DIRECTION 1\r\n";
         cmd += "CLS\r\n";
-        
-        // 1. QR
         cmd += `QRCODE 50,150,L,10,A,0,M2,S7,"${d.lote}"\r\n`;
-
-        // 2. Textos
-        // Nota: He mantenido tus coordenadas. Si sale desalineado, ajusta los primeros números (X,Y)
         cmd += `TEXT 350,60,"3",0,2,2,"LOTE:"\r\n`;
-        cmd += `TEXT 380,100,"3",0,4,4,"${d.lote}"\r\n`; // Ajusté un poco el multiplicador para que quepa mejor
-
-        // 3. Detalles (Intentando centrar en X=400 aprox)
+        cmd += `TEXT 380,100,"3",0,4,4,"${d.lote}"\r\n`; 
         cmd += `TEXT 400,280,"3",0,1,1,2,"${d.producto}"\r\n`;
         cmd += `TEXT 400,320,"3",0,1,1,2,"${d.especie}"\r\n`;
         cmd += `TEXT 400,360,"3",0,1,1,2,"${d.medidas}"\r\n`;
-
-        // Línea
         cmd += `BAR 20,430,760,3\r\n`;
-
-        // 4. Estadísticas
         cmd += `TEXT 130,450,"2",0,1,1,2,"FARDOS"\r\n`;
         cmd += `TEXT 400,450,"2",0,1,1,2,"PIEZAS"\r\n`;
         cmd += `TEXT 670,450,"2",0,1,1,2,"M2 TOTAL"\r\n`;
-        
         cmd += `TEXT 130,480,"3",0,2,2,"${d.fardos}"\r\n`;
         cmd += `TEXT 400,480,"3",0,2,2,"${d.piezas}"\r\n`;
         cmd += `TEXT 630,480,"3",0,2,2,"${d.m2}"\r\n`;
-
         cmd += "PRINT 1,1\r\n";
 
         try {
             const encodedData = encoder.encode(cmd);
-            const CHUNK_SIZE = 50; // Enviar en paquetes pequeños para estabilidad
+            const CHUNK_SIZE = 50; 
             for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
                 await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
                 await new Promise(resolve => setTimeout(resolve, 20));
@@ -395,7 +384,6 @@
         const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
         printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
         
-        // Feedback visual
         const btn = document.querySelector('.btn-connect');
         btn.innerText = "✅ Conectado: " + bluetoothDevice.name;
         btn.style.backgroundColor = "#d4edda";
