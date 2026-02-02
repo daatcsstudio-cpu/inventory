@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Etiquetas - Madera Aserrada</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
-    <script src="bluetooth_printer.js"></script>
     <style>
         :root {
             --primary: #1A237E;
             --bg: #F5F7F9;
             --card-bg: #FFFFFF;
             --text-dark: #2c3e50;
+            --btn-pc: #00897b;
+            --btn-bt: #2c3e50;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -54,12 +55,41 @@
             font-weight: bold;
             font-size: 1rem;
             cursor: pointer;
+            transition: opacity 0.2s;
         }
+        button:active { opacity: 0.8; }
+
         .btn-search { background-color: var(--primary); color: white; }
-        .btn-print { background-color: var(--text-dark); color: white; margin-top: 20px; }
+        .btn-print-pc { background-color: var(--btn-pc); color: white; margin-top: 10px; }
+        .btn-print-bt { background-color: var(--btn-bt); color: white; margin-top: 10px; }
         .btn-add { background-color: var(--primary); color: white; margin-top: 10px; }
-        .btn-back { background-color: #e0e6ed; color: var(--text-dark); text-decoration: none; display: block; text-align: center; margin-top: 20px; padding: 15px; border-radius: 15px; font-weight: bold; }
-        .btn-bt { background-color: #e0e6ed; color: var(--text-dark); margin-bottom: 15px; width: 100%; padding: 15px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; }
+        
+        .btn-connect { 
+            background-color: #e0e6ed; 
+            color: var(--text-dark); 
+            margin-bottom: 15px; 
+            width: 100%; 
+            padding: 15px; 
+            border: none; 
+            border-radius: 15px; 
+            font-weight: bold; 
+            cursor: pointer; 
+        }
+
+        /* Botón Volver Estilizado */
+        .btn-back { 
+            background-color: #e0e6ed; 
+            color: var(--text-dark); 
+            text-decoration: none; 
+            display: block; 
+            text-align: center; 
+            margin-top: 20px; 
+            padding: 15px; 
+            border-radius: 15px; 
+            font-weight: bold; 
+            border: 1px solid #cbd5e1;
+        }
+        .btn-back:hover { background-color: #cbd5e1; }
 
         #status { font-size: 0.9rem; color: #666; margin-bottom: 10px; text-align: center; }
 
@@ -87,7 +117,7 @@
             margin-bottom: 20px;
         }
 
-        /* Ajuste para pantallas pequeñas (iPhone) */
+        /* Ajuste para pantallas pequeñas */
         @media screen and (max-width: 400px) {
             .label-box {
                 transform: scale(0.85);
@@ -99,26 +129,31 @@
         /* ESTILOS DE IMPRESIÓN (4x3 Pulgadas) */
         @media print {
             @page { size: 4in 3in; margin: 0; }
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; }
+            html, body { margin: 0; padding: 0; background: white; }
+            body * { visibility: hidden; } /* Ocultar todo por defecto */
+            
+            #print-area, #print-area * { visibility: visible; } /* Mostrar solo área de impresión */
+            
             #print-area {
-                position: fixed;
+                position: absolute;
                 left: 0; top: 0;
-                width: 100%; height: 100%;
-                margin: 0; padding: 0;
-                display: block;
+                width: 100%;
             }
+            
             .label-box {
                 border: none; /* Quitar borde punteado al imprimir */
                 width: 4in;
                 height: 3in;
                 margin: 0;
-                page-break-after: always;
+                page-break-after: always; /* Una etiqueta por página */
+                display: flex !important;
             }
-            .no-print { display: none; }
+            .label-box:last-child { page-break-after: avoid; }
+            
+            .no-print { display: none !important; }
         }
 
-        /* Contenido de la etiqueta */
+        /* Contenido interno de la etiqueta */
         .lbl-header-row { display: flex; justify-content: space-between; align-items: center; width: 100%; border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 5px; }
         .lbl-title { font-size: 1rem; font-weight: bold; text-align: left; }
         .lbl-bulto-big { font-size: 3rem; font-weight: 900; line-height: 1; }
@@ -141,22 +176,24 @@
 </head>
 <body>
     <div class="container">
-        <h2 class="no-print">🏷️ Imprimir Etiquetas (Aserrada)</h2>
-        <button class="btn-bt no-print" onclick="conectarBluetooth()">📡 Conectar Impresora BT</button>
+        <h2 class="no-print">🏷️ Etiquetas Aserrada</h2>
+        <button class="btn-connect no-print" onclick="conectarBluetooth()">📡 Conectar Impresora BT</button>
         
         <div class="card no-print">
-            <div id="status">Conectando...</div>
+            <div id="status">Esperando conexión...</div>
             <label style="font-weight:bold;">Número de Bulto</label>
             <input type="text" id="searchBulto" placeholder="Ej: 501">
-            <button class="btn-search" onclick="buscarBulto()">BUSCAR ETIQUETA</button>
+            <button class="btn-search" onclick="buscarBulto()">🔍 BUSCAR DATOS</button>
         </div>
 
-        <!-- Cola de Impresión -->
         <div id="queue-container" class="card no-print" style="display:none;">
             <h3 style="margin-top:0;">Cola de Impresión (<span id="queue-count">0</span>)</h3>
             <div id="queue-list" style="max-height: 150px; overflow-y: auto; text-align: left; margin-bottom: 10px;"></div>
-            <button class="btn-print" onclick="imprimirCola()">🖨️ IMPRIMIR (PDF/PC)</button>
-            <button class="btn-print" style="background-color: #e67e22;" onclick="imprimirColaBluetooth()">📡 IMPRIMIR BLUETOOTH</button>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button class="btn-print-pc" onclick="imprimirColaPC()">🖥️ Imprimir PC</button>
+                <button class="btn-print-bt" onclick="imprimirColaBluetooth()">📡 Imprimir BT</button>
+            </div>
         </div>
 
         <div id="label-preview-container" style="display:none;">
@@ -189,10 +226,9 @@
 
         <button id="btnAdd" class="btn-add no-print" style="display:none;" onclick="agregarACola()">➕ AGREGAR A COLA</button>
 
-        <!-- <a href="menu_aserrada.html" class="btn-back no-print">⬅ Volver al Menú</a> -->
+        <a href="index.html" class="btn-back no-print">⬅ Volver al Dashboard</a>
     </div>
 
-    <!-- Área oculta para generar las etiquetas al imprimir -->
     <div id="print-area"></div>
 
     <script>
@@ -200,25 +236,37 @@
         let inventario = [];
         let printQueue = [];
         let currentBultoData = null;
+        let bluetoothDevice;
+        let printCharacteristic;
 
         window.onload = function() {
             cargarInventario();
             document.getElementById('searchBulto').addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') buscarBulto();
             });
+
+            // Auto-conexión Bluetooth si está disponible
+            if (navigator.bluetooth && navigator.bluetooth.getDevices) {
+                navigator.bluetooth.getDevices().then(devices => {
+                    const myPrinter = devices.find(d => d.name && (d.name.includes('MTH') || d.name.includes('Printer')));
+                    if (myPrinter) conectarDispositivo(myPrinter);
+                });
+            }
         };
 
         function cargarInventario() {
             const status = document.getElementById('status');
+            status.innerText = "Cargando base de datos...";
             fetch(GOOGLE_SCRIPT_URL + "?sheet=MADERA ASERRADA")
             .then(res => res.json())
             .then(data => {
                 inventario = data;
-                status.innerText = `✅ Listo: ${data.length} registros cargados.`;
-                status.style.color = "#16a085";
+                status.innerText = `✅ Base de datos lista (${data.length} registros)`;
+                status.style.color = "green";
             })
             .catch(err => {
                 status.innerText = "❌ Error cargando datos.";
+                status.style.color = "red";
             });
         }
 
@@ -226,7 +274,7 @@
             const bulto = document.getElementById('searchBulto').value.trim();
             if (!bulto) return;
 
-            // Filtrar filas del bulto
+            // Filtrar filas del bulto (pueden ser varias si hay desglose)
             const filas = inventario.filter(row => String(row['FARDO']) === String(bulto));
 
             if (filas.length === 0) {
@@ -245,14 +293,12 @@
                 totalPT += parseFloat(f['PIES TABLARES']) || 0;
             });
 
-            // Formatear fecha
             let fechaRaw = head['Fecha de ingreso'];
             let fechaFmt = fechaRaw;
             if(fechaRaw && typeof fechaRaw === 'string' && fechaRaw.includes('T')) {
                 fechaFmt = new Date(fechaRaw).toLocaleDateString();
             }
 
-            // Guardar datos actuales para agregar a cola
             currentBultoData = {
                 idCode: head['ID CODE'] || `${head['POA']}-${head['FARDO']}`,
                 fardo: head['FARDO'],
@@ -267,7 +313,7 @@
                 ubicacion: head['UBICACION']
             };
 
-            // Llenar datos
+            // Llenar la vista previa
             document.getElementById('lbl-idcode').innerText = currentBultoData.idCode;
             document.getElementById('lbl-especie').innerText = currentBultoData.especie;
             document.getElementById('lbl-calidad').innerText = currentBultoData.calidad;
@@ -277,13 +323,8 @@
             document.getElementById('lbl-pzs').innerText = currentBultoData.pzs;
             document.getElementById('lbl-bulto-header').innerText = `#${currentBultoData.fardo}`;
 
-            // Generar Código de Barras
-            JsBarcode("#barcode", head['ID CODE'] || `${head['POA']}-${head['FARDO']}`, {
-                format: "CODE128",
-                height: 50,
-                width: 2,
-                displayValue: false,
-                margin: 5
+            JsBarcode("#barcode", currentBultoData.idCode, {
+                format: "CODE128", height: 50, width: 2, displayValue: false, margin: 5
             });
 
             document.getElementById('label-preview-container').style.display = 'flex';
@@ -293,7 +334,6 @@
         function agregarACola() {
             if (!currentBultoData) return;
             
-            // Verificar si ya está
             if (printQueue.some(item => item.fardo === currentBultoData.fardo)) {
                 alert("Este bulto ya está en la cola.");
                 return;
@@ -302,7 +342,6 @@
             printQueue.push(currentBultoData);
             actualizarUICola();
             
-            // Limpiar búsqueda
             document.getElementById('searchBulto').value = "";
             document.getElementById('searchBulto').focus();
             document.getElementById('label-preview-container').style.display = 'none';
@@ -339,16 +378,17 @@
             actualizarUICola();
         }
 
-        function imprimirCola() {
+        // --- IMPRESIÓN PC ---
+        function imprimirColaPC() {
             const printArea = document.getElementById('print-area');
-            printArea.innerHTML = ""; // Limpiar
+            printArea.innerHTML = ""; // Limpiar área
 
             printQueue.forEach((item, index) => {
-                // Clonar la estructura de la etiqueta
+                // Clonar la plantilla
                 const labelClone = document.getElementById('etiqueta').cloneNode(true);
                 labelClone.id = "print-lbl-" + index;
                 
-                // Actualizar datos en el clon
+                // Actualizar datos
                 labelClone.querySelector('#lbl-bulto-header').innerText = "#" + item.fardo;
                 labelClone.querySelector('#lbl-idcode').innerText = item.idCode;
                 labelClone.querySelector('#lbl-especie').innerText = item.especie;
@@ -358,18 +398,52 @@
                 labelClone.querySelector('#lbl-pt').innerText = item.pt;
                 labelClone.querySelector('#lbl-pzs').innerText = item.pzs;
                 
-                // Re-generar código de barras en el clon (JsBarcode necesita el elemento SVG real)
+                // IMPORTANTE: El SVG clonado necesita un ID único para JsBarcode
                 const svg = labelClone.querySelector('svg');
                 svg.id = "barcode-print-" + index;
                 
                 printArea.appendChild(labelClone);
                 
+                // Generar barcode en el elemento ya insertado en el DOM
                 JsBarcode("#barcode-print-" + index, item.idCode, {
                     format: "CODE128", height: 50, width: 2, displayValue: false, margin: 5
                 });
             });
 
             window.print();
+        }
+
+        // --- IMPRESIÓN BLUETOOTH ---
+        async function conectarBluetooth() {
+            try {
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb']
+                });
+                conectarDispositivo(bluetoothDevice);
+            } catch (error) {
+                console.log("Cancelado: " + error);
+            }
+        }
+
+        async function conectarDispositivo(device) {
+            bluetoothDevice = device;
+            const server = await bluetoothDevice.gatt.connect();
+            let characteristic;
+            try {
+                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+            } catch (e) {
+                const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
+                characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
+            }
+            printCharacteristic = characteristic;
+            const btn = document.querySelector('.btn-connect');
+            if(btn) {
+                btn.innerText = "✅ Conectado: " + bluetoothDevice.name;
+                btn.style.backgroundColor = "#d4edda";
+                btn.style.color = "#155724";
+            }
         }
 
         async function imprimirColaBluetooth() {
@@ -384,43 +458,37 @@
             }
 
             const encoder = new TextEncoder();
-            const CHUNK_SIZE = 50;
-
+            
             for (const item of printQueue) {
                 let cmd = "";
-                // Configuración 101x76mm (según Selftest)
+                // Configuración TSPL
                 cmd += "SIZE 101 mm, 76 mm\r\n"; 
                 cmd += "GAP 3 mm, 0 mm\r\n";
                 cmd += "DIRECTION 1\r\n";
                 cmd += "CLS\r\n";
                 cmd += "DENSITY 8\r\n";
 
-                // --- ENCABEZADO ---
+                // Header
                 cmd += `TEXT 40,30,"3",0,1,1,"MADERA ASERRADA"\r\n`;
-                // Usamos fuente "3" escalada (3,3) en lugar de "4" para evitar el cuadro negro
                 cmd += `TEXT 500,20,"3",0,3,3,"#${item.fardo}"\r\n`;
                 
-                // --- CÓDIGO DE BARRAS CENTRADO ---
-                // Usamos 2,4 para asegurar que quepa si el código es largo (el ejemplo usaba 3,6)
+                // Barcode
                 cmd += `BARCODE 120,90,"128",90,1,0,2,4,"${item.idCode}"\r\n`;
 
-                // --- SEPARADOR ---
+                // Separador
                 cmd += `BAR 40,230,730,4\r\n`;
 
-                // --- DETALLES DE ESPECIE ---
+                // Detalles
                 cmd += `TEXT 40,260,"3",0,1,1,"Especie: ${item.especie}"\r\n`;
                 cmd += `TEXT 40,310,"3",0,1,1,"Calidad: ${item.calidad}"\r\n`;
-                
-                // Grosor y Condición en la misma línea
                 cmd += `TEXT 40,350,"3",0,1,1,"Grosor: ${item.grosor}"\r\n`;
                 cmd += `TEXT 400,350,"3",0,1,1,"Cond: ${item.condicion}"\r\n`;
-                // POA y Fecha en la siguiente línea
                 cmd += `TEXT 40,390,"3",0,1,1,"POA: ${item.poa}  Fecha: ${item.fecha}"\r\n`;
 
-                // --- SEPARADOR INFERIOR ---
+                // Separador Inferior
                 cmd += `BAR 40,420,730,4\r\n`;
 
-                // --- TOTALES EN GRANDE (Jerarquía Visual) ---
+                // Totales
                 cmd += `TEXT 40,450,"2",0,1,1,"PIEZAS"\r\n`;
                 cmd += `TEXT 40,500,"5",0,1,1,"${item.pzs}"\r\n`;
 
@@ -430,12 +498,12 @@
                 cmd += "PRINT 1,1\r\n";
 
                 const encodedData = encoder.encode(cmd);
-                const CHUNK_SIZE = 50;
+                const CHUNK_SIZE = 100; // Chunk size más grande para TSPL suele ser seguro
                 for (let i = 0; i < encodedData.length; i += CHUNK_SIZE) {
                     await printCharacteristic.writeValue(encodedData.slice(i, i + CHUNK_SIZE));
                     await new Promise(resolve => setTimeout(resolve, 20));
                 }
-                await new Promise(resolve => setTimeout(resolve, 300)); // Pausa entre etiquetas
+                await new Promise(resolve => setTimeout(resolve, 500)); // Pausa entre etiquetas
             }
             alert("Impresión Bluetooth finalizada.");
         }
