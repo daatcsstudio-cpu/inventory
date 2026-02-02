@@ -18,7 +18,6 @@
             --bg: #F5F7F9;
             --text-dark: #2c3e50;
             --text-gray: #95a5a6;
-            --btn-pc: #00897b;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -111,6 +110,19 @@
         .btn-small { padding: 6px 10px; margin: 0; width: auto; background: var(--primary); color: white; border-radius: 6px; font-size: 0.8rem; }
         .btn-del { background: #ff5252; color: white; width: auto; padding: 6px 10px; margin: 0; border-radius: 6px; }
 
+        #label-template {
+            display: none;
+            background: white;
+            box-sizing: border-box;
+            width: 4in;
+            height: 3in;
+            padding: 5px 10px;
+            flex-direction: column;
+            overflow: hidden;
+            align-items: center;
+            text-align: center;
+        }
+
         .slider-container {
             display: flex;
             overflow-x: auto;
@@ -146,54 +158,6 @@
         .quick-btn.active { background-color: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 8px rgba(26, 35, 126, 0.2); }
         .quick-btn:active { transform: scale(0.95); }
 
-        /* --- ESTILOS DE IMPRESIÓN PC --- */
-        #printable-area { display: none; }
-
-        @media print {
-            @page { size: 4in 3in; margin: 0; }
-            html, body { margin: 0; padding: 0; background: white; }
-            body * { visibility: hidden; } /* Ocultar interfaz */
-            
-            #printable-area, #printable-area * { visibility: visible; }
-            #printable-area { 
-                position: absolute; 
-                left: 0; top: 0; 
-                width: 100%; 
-                display: block !important;
-            }
-
-            .label-page {
-                width: 4in;
-                height: 3in;
-                page-break-after: always;
-                position: relative;
-                box-sizing: border-box;
-                padding: 10px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                border: none;
-                overflow: hidden;
-            }
-            
-            /* Estilos internos de la etiqueta PC */
-            .lbl-header { width: 100%; display: flex; justify-content: space-between; border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 5px; }
-            .lbl-title { font-size: 1.2rem; font-weight: bold; }
-            .lbl-sub { font-size: 0.9rem; font-weight: bold; text-align: right; }
-            
-            .lbl-main { width: 100%; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-            .lbl-prod { font-size: 1.1rem; font-weight: bold; }
-            .lbl-spec { font-size: 1rem; font-style: italic; }
-            .lbl-dims { font-size: 1.2rem; font-weight: bold; margin-top: 5px; padding-top: 5px; border-top: 1px solid black; }
-            
-            .lbl-footer { width: 100%; display: flex; justify-content: space-between; border-top: 2px solid black; padding-top: 5px; margin-top: auto; }
-            .lbl-col-print { width: 48%; text-align: center; }
-            .lbl-val { font-size: 1.1rem; font-weight: bold; }
-            .lbl-head { font-size: 0.8rem; font-weight: bold; text-decoration: underline; }
-            
-            /* Ajuste Barcode */
-            .lbl-barcode { height: 40px; margin-bottom: 5px; width: 100%; }
-        }
     </style>
 </head>
 <body>
@@ -291,21 +255,25 @@
     <a href="index.html" class="btn-back">⬅ Volver al Dashboard</a>
 </div>
 
-<div id="label-template" style="display:none; width:400px; background:white; padding:10px; text-align:center; border:2px solid black;">
+<div id="label-template">
     <svg id="barcode"></svg>
-    <div id="printLote" style="font-weight:bold; font-size: 1.1rem;">Lote: ---</div>
-    <div id="printFardoM2" style="font-weight:bold; font-size: 1rem;">Fardo: ---</div>
-    <hr>
-    <div id="printProducto"></div>
-    <div id="printEspecie"></div>
-    <hr>
-    <div style="display:flex; justify-content:space-between;">
-        <div id="printPiezasCol"></div>
-        <div id="printLargosCol"></div>
+    <div id="printLote" style="font-weight:bold; font-size: 1.1rem; margin-top: 2px;">Lote: ---</div>
+    <div id="printFardoM2" style="font-weight:bold; font-size: 1rem; margin-bottom: 5px;">Fardo: --- - --- M2</div>
+    <div style="width:100%; border-bottom: 2px solid black; margin-bottom: 5px;"></div>
+    <div id="printProducto" style="font-weight:bold; font-size: 1rem;">Producto ---</div>
+    <div id="printEspecie" style="font-size: 0.9rem;">Especie: ---</div>
+    <div style="width:100%; border-bottom: 2px solid black; margin: 5px 0;"></div>
+    <div style="display: flex; justify-content: space-between; flex-grow: 1; width: 100%;">
+        <div style="width:48%;">
+            <div class="print-col-header"><b>Piezas</b></div>
+            <div id="printPiezasCol"></div>
+        </div>
+        <div style="width:48%;">
+            <div class="print-col-header"><b>Largo</b></div>
+            <div id="printLargosCol"></div>
+        </div>
     </div>
 </div>
-
-<div id="printable-area"></div>
 
 <script>
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJm67IZXi_zHsxQv3mqosqb6-RyKp4-j-h-kqdP153HTN8t6lt7BPE5BrwSzphArkx/exec";
@@ -317,7 +285,6 @@
     let selectedPiezas = 1;
     let autoPrint = true;
 
-    // Utilidad simple para logs
     function debug(msg, type='info') {
         console.log(`[${type.toUpperCase()}] ${msg}`);
     }
@@ -336,7 +303,6 @@
         if(localStorage.getItem('last_lote')) document.getElementById('loteId').value = localStorage.getItem('last_lote');
         if(localStorage.getItem('last_fardo')) document.getElementById('fardoNo').value = localStorage.getItem('last_fardo');
         
-        // Reconexión automática para MTH-L1081-13E2
         if (navigator.bluetooth && navigator.bluetooth.getDevices) {
             navigator.bluetooth.getDevices().then(devices => {
                 const myPrinter = devices.find(d => d.name && (d.name.includes('MTH') || d.name.includes('Printer')));
@@ -495,6 +461,23 @@
         renderDetalles();
     }
 
+    // --- NUEVA FUNCIÓN: Verificar consistencia del Lote ---
+    function verificarConsistenciaLote(lote, producto) {
+        // 1. Revisar en datos locales pendientes
+        const localConflict = fardosData.find(f => String(f.lote) === String(lote) && f.producto !== producto);
+        if (localConflict) {
+            return { error: true, prod: localConflict.producto, origen: "LOCAL" };
+        }
+
+        // 2. Revisar en datos remotos (Google Sheet)
+        const remoteConflict = inventarioRemoto.find(r => String(r['# Lote']) === String(lote) && (r['Producto'] || r['Calidad']) !== producto);
+        if (remoteConflict) {
+            return { error: true, prod: (remoteConflict['Producto'] || remoteConflict['Calidad']), origen: "REMOTO" };
+        }
+
+        return { error: false };
+    }
+
     function agregarFardo() {
         const pzsInput = document.getElementById('newPiezas');
         const largoInput = document.getElementById('newLargo');
@@ -518,8 +501,16 @@
             return;
         }
 
+        // --- VALIDACIÓN 1: DUPLICADO EXACTO ---
         if (verificarDuplicado(lote, fardoNo, producto)) {
-            alert("⚠️ EL FARDO #" + fardoNo + " YA EXISTE (en local o en la base de datos) para este Lote y Producto.");
+            alert("⚠️ EL FARDO #" + fardoNo + " YA EXISTE para este Lote.");
+            return;
+        }
+
+        // --- VALIDACIÓN 2: CONSISTENCIA DE LOTE (Nuevo) ---
+        const checkConsistencia = verificarConsistenciaLote(lote, producto);
+        if (checkConsistencia.error) {
+            alert(`⛔ ERROR DE LOTE:\nEl Lote ${lote} ya está registrado como "${checkConsistencia.prod}" (${checkConsistencia.origen}).\nNo puedes mezclar "${producto}" en el mismo lote.`);
             return;
         }
 
@@ -533,6 +524,9 @@
         };
         const grosorVal = parseFraction(grosorStr);
         const unidad = (producto === 'Tranquilla') ? 'ml' : 'm2';
+
+        // --- FORMATO FECHA SIN HORA ---
+        const fechaSimple = new Date().toLocaleDateString('es-GT'); // Formato d/m/aaaa
 
         const filasParaEnviar = [];
         let totalMetrosFardo = 0, totalP2Fardo = 0, totalM3Fardo = 0;
@@ -556,7 +550,8 @@
                 largo: d.largo,
                 m2: parseFloat(m2_linea.toFixed(3)), ml: parseFloat(ml_linea.toFixed(2)),
                 p2: parseFloat(p2_linea.toFixed(2)), m3: parseFloat(m3_linea.toFixed(4)),
-                unidad: unidad
+                unidad: unidad,
+                fecha: fechaSimple // Enviamos la fecha formateada
             });
 
             totalMetrosFardo += (unidad === 'ml') ? ml_linea : m2_linea;
@@ -670,11 +665,9 @@
             
             const item = document.createElement('div');
             item.className = 'row-item';
-            // Ahora con botón PC
             item.innerHTML = `
                 <span>Fardo: ${f.fardoNo} (${totalPiezas} pzs - ${f.m2} ${unidadLocal})</span> 
                 <div style="display:flex; gap:5px;">
-                    <button onclick="imprimirFardoPC(${index})" class="btn-small" style="background:var(--btn-pc); width:auto;">🖥️ PC</button>
                     <button onclick="guardarImagen(${index})" class="btn-small" style="background:#3498db; width:auto;">Img</button>
                     <button onclick="imprimirBluetooth(${index})" class="btn-small" style="background:#e67e22; width:auto;">BT</button>
                     <button onclick="editarFardo(${index})" class="btn-small" style="background:#f1c40f; width:auto; margin-left:5px; color:black;">✏️</button>
@@ -725,12 +718,15 @@
         document.querySelector('.container').scrollIntoView({behavior: 'smooth'});
     }
 
-    // --- PREPARACIÓN PARA IMAGEN (HTML2CANVAS) ---
-    function prepararEtiquetaImagen(f) {
+    function prepararEtiqueta(f) {
         if (typeof JsBarcode !== 'undefined') {
             try {
                 JsBarcode("#barcode", f.fardoNo, {
-                    format: "CODE128", displayValue: false, height: 40, width: 3, margin: 0
+                    format: "CODE128",
+                    displayValue: false,
+                    height: 40,
+                    width: 3,
+                    margin: 0
                 });
             } catch(e) { console.error(e); }
         }
@@ -738,26 +734,36 @@
         const unidad = f.unidad === 'ml' ? 'ML' : 'M2';
         document.getElementById('printLote').innerText = "Lote: " + f.lote;
         document.getElementById('printFardoM2').innerText = `Fardo: ${f.fardoNo} - ${f.m2} ${unidad}`;
+        
         document.getElementById('printProducto').innerText = `${f.producto} ${f.grosor} x ${f.ancho}"`;
         document.getElementById('printEspecie').innerText = "Especie: " + f.especie;
         
         const colPiezas = document.getElementById('printPiezasCol');
         const colLargos = document.getElementById('printLargosCol');
-        colPiezas.innerHTML = "<b>Piezas</b>";
-        colLargos.innerHTML = "<b>Largo</b>";
+        
+        colPiezas.innerHTML = "";
+        colLargos.innerHTML = "";
 
         f.detalles.forEach(d => {
-            colPiezas.innerHTML += `<div>${d.piezas}</div>`;
-            colLargos.innerHTML += `<div>${d.largo}</div>`;
+            const pDiv = document.createElement('div');
+            pDiv.className = 'print-val';
+            pDiv.innerText = d.piezas;
+            colPiezas.appendChild(pDiv);
+
+            const lDiv = document.createElement('div');
+            lDiv.className = 'print-val';
+            lDiv.innerText = d.largo;
+            colLargos.appendChild(lDiv);
         });
     }
 
     function guardarImagen(index) {
         const f = fardosData[index];
-        prepararEtiquetaImagen(f);
+        prepararEtiqueta(f);
         
         const label = document.getElementById('label-template');
-        label.style.display = 'block';
+        
+        label.style.display = 'flex';
         label.style.position = 'fixed';
         label.style.zIndex = '9999';
         label.style.top = '0';
@@ -765,10 +771,14 @@
         
         html2canvas(label, { scale: 2 }).then(canvas => {
             label.style.display = 'none';
+            
             canvas.toBlob(function(blob) {
                 const file = new File([blob], `Fardo_${f.fardoNo}.png`, { type: "image/png" });
+
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    navigator.share({ files: [file] }).catch(e => console.log("Compartir cancelado", e));
+                    navigator.share({
+                        files: [file]
+                    }).catch(e => console.log("Compartir cancelado o fallido", e));
                 } else {
                     const link = document.createElement('a');
                     link.download = `Fardo_${f.fardoNo}.png`;
@@ -779,17 +789,21 @@
         });
     }
 
+    // --- ORDEN DE EXPORTACIÓN MODIFICADO ---
     function exportarExcel() {
         if(fardosData.length === 0) return alert("No hay datos para exportar");
+        
         let flatData = [];
         fardosData.forEach(f => {
             f.detalles.forEach(d => {
                 flatData.push({
                     Lote: f.lote,
                     Fardo: f.fardoNo,
-                    Producto: f.producto,
-                    Grosor: f.grosor,
+                    // ORDEN SOLICITADO: Especie -> Producto -> Calidad (se deja vacía o default)
                     Especie: f.especie,
+                    Producto: f.producto,
+                    Calidad: "", // Campo vacío como placeholder para el Sheet
+                    Grosor: f.grosor,
                     Piezas: d.piezas,
                     Largo_Ft: d.largo,
                     Ancho_In: f.ancho,
@@ -798,58 +812,12 @@
                 });
             });
         });
+
         const worksheet = XLSX.utils.json_to_sheet(flatData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Inventario");
+        
         XLSX.writeFile(workbook, `Inventario_Lote_${fardosData[0].lote}.xlsx`);
-    }
-
-    // --- Lógica de Impresión PC ---
-    function imprimirFardoPC(index) {
-        const f = fardosData[index];
-        const container = document.getElementById('printable-area');
-        container.innerHTML = ""; // Limpiar
-
-        // Construir HTML de la etiqueta para impresión
-        const page = document.createElement('div');
-        page.className = 'label-page';
-        
-        const medidas = `${f.grosor}" x ${f.ancho}"`;
-        const unidad = f.unidad === 'ml' ? 'ML' : 'M2';
-
-        page.innerHTML = `
-            <div class="lbl-header">
-                <div class="lbl-title">LOTE: ${f.lote}</div>
-                <div class="lbl-sub">FARDO #${f.fardoNo}</div>
-            </div>
-            
-            <div class="lbl-main">
-                <div class="lbl-prod">${f.producto}</div>
-                <div class="lbl-spec">${f.especie}</div>
-                <div class="lbl-dims">${medidas}</div>
-                <svg class="lbl-barcode" id="bc-${index}"></svg>
-            </div>
-
-            <div class="lbl-footer">
-                <div class="lbl-col-print">
-                    <div class="lbl-head">PIEZAS</div>
-                    <div class="lbl-val">${f.piezas || f.detalles.reduce((a,b)=>a+b.piezas,0)}</div>
-                </div>
-                <div class="lbl-col-print">
-                    <div class="lbl-head">TOTAL ${unidad}</div>
-                    <div class="lbl-val">${f.m2}</div>
-                </div>
-            </div>
-        `;
-        
-        container.appendChild(page);
-
-        // Generar Barcode
-        JsBarcode(`#bc-${index}`, `${f.lote}-${f.fardoNo}`, {
-            format: "CODE128", displayValue: true, height: 35, width: 2, margin: 0, fontSize: 12
-        });
-
-        window.print();
     }
 
     // --- Lógica Bluetooth ---
@@ -868,6 +836,7 @@
     async function conectarDispositivo(device) {
         bluetoothDevice = device;
         const server = await bluetoothDevice.gatt.connect();
+
         let characteristic;
         try {
             const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
@@ -876,6 +845,7 @@
             const service = await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb');
             characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
         }
+
         printCharacteristic = characteristic;
         const btn = document.querySelector('.btn-bt');
         if(btn) {
@@ -887,15 +857,17 @@
 
     async function imprimirBluetooth(index, silent = false) {
         if (!printCharacteristic) {
-            if(!silent) alert("Primero debes conectar la impresora");
+            if(!silent) alert("Primero debes conectar la impresora (Botón Gris arriba)");
             return;
         }
+
         const f = fardosData[index];
+        
         try {
             await imprimirEtiquetaTerminado(printCharacteristic, f, silent);
         } catch (error) {
             if(!silent) alert("Error enviando datos: " + error);
-            conectarBluetooth();
+            conectarBluetooth(); // Intentar reconectar si falla
         }
     }
 
@@ -906,11 +878,14 @@
         }
         try {
             const encoder = new TextEncoder();
-            const cmd = "SIZE 4,2\r\nCLS\r\nTEXT 50,50,\"3\",0,1,1,\"TEST\"\r\nPRINT 1,1\r\n";
+            const cmd = "SIZE 4,2\r\nCLS\r\nTEXT 50,50,\"3\",0,1,1,\"TEST MHT-L1081\"\r\nPRINT 1,1\r\n";
             const data = encoder.encode(cmd);
-            await printCharacteristic.writeValue(data);
+            if (printCharacteristic.properties.write) await printCharacteristic.writeValue(data);
+            else await printCharacteristic.writeValueWithoutResponse(data);
             alert("✅ Test enviado");
-        } catch (e) { alert("❌ Error: " + e.message); }
+        } catch (e) {
+            alert("❌ Error test: " + e.message);
+        }
     }
 </script>
 
