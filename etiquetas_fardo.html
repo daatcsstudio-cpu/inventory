@@ -487,7 +487,7 @@
         for (const f of fardosDelLote) {
             try {
                 // Llamada a la función del archivo EXTERNO
-                await imprimirEtiquetaTerminado(printCharacteristic, f);
+                await imprimirEtiquetaTerminado(printCharacteristic, f, true);
                 await new Promise(r => setTimeout(r, 500)); 
             } catch (e) {
                 console.error("Error imprimiendo fardo " + f.fardoNo, e);

@@ -257,7 +257,9 @@
             return;
         }
 
-        let totalFardos = fardosLote.length;
+        // Contar fardos únicos (evitar duplicados por detalles de largos)
+        const uniqueFardos = new Set(fardosLote.map(f => String(f['# Fardo'] || f['Fardo'])));
+        let totalFardos = uniqueFardos.size;
         let totalM2 = 0;
         let totalPiezas = 0;
 
