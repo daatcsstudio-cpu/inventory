@@ -252,17 +252,7 @@
                         </div>
                     </div>
 
-                    <!-- Tabla Pivot Producto Terminado -->
-                    <div id="pivot-table-container" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6" style="display: none;">
-                        <h2 id="pivot-table-title" class="text-xl font-bold text-slate-800 mb-4"></h2>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full text-sm text-left text-slate-600">
-                                <thead id="pte-table-head" class="text-xs text-slate-700 uppercase bg-gray-50"></thead>
-                                <tbody id="pte-table-body"></tbody>
-                                <tfoot id="pte-table-foot" class="font-bold text-slate-800 bg-gray-50"></tfoot>
-                            </table>
-                        </div>
-                    </div>
+
                 </div>
 
                 <!-- CONTENEDOR IFRAME (Para cargar módulos externos) -->
@@ -513,9 +503,6 @@
                     document.getElementById('total-tranquilla').innerText = totalTranquillaML.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ml";
                     document.getElementById('total-deck').innerText = totalDeckM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
                     document.getElementById('total-aserrada').innerText = totalPiesTablares.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " PT";
-
-                    // Renderizar Tabla Pivot Inicial (Sin filtro)
-                    renderPivotTable();
                 })
                 .catch(error => {
                     console.error("Error cargando datos del dashboard:", error);
@@ -616,7 +603,6 @@
                 footerHTML += `<td class="px-4 py-2 border-t text-right bg-gray-100">${grandTotal.toFixed(2)}</td></tr>`;
                 tfoot.innerHTML = footerHTML;
             }
-            document.getElementById('pivot-table-container').style.display = 'block';
         }
 
         async function exportarDatos() {
@@ -797,17 +783,30 @@
                 lucide.createIcons();
                 return; // Salir, no renderizar tabla estándar
             } else {
-                // MODO PISO: Mostrar Tabla Estándar
+                // MODO PISO: Mostrar Tabla Estándar FILTRADA
                 genericTable.classList.remove('hidden');
                 speciesView.classList.add('hidden');
 
-                // Filtrar datos PTE
-                const term = type.toLowerCase().replace('piso ', ''); // 'barnizado', 'crudo', 'tranquilla'
+                // Determinar término de búsqueda según el tipo
+                const term = type.toLowerCase().replace('piso ', ''); // 'barnizado', 'crudo', 'tranquilla', 'deck'
+                
+                // Filtrar datos PTE por tipo de producto Y calidad
                 data = globalDataPTE.filter(d => {
-                    // Buscar en varias posibles columnas de producto
                     const prod = (d['Producto'] || d['Calidad'] || d['PRODUCTO'] || '').toLowerCase();
-                    return prod.includes(term);
+                    const calidad = (d['Calidad'] || d['CALIDAD'] || '').trim().toLowerCase();
+                    
+                    // Verificar si coincide con el tipo de producto
+                    const matchesType = prod.includes(term);
+                    
+                    // Para productos que usan calidad (barnizado, crudo, deck), filtrar solo Primera
+                    if (['barnizado', 'crudo', 'deck'].some(t => term.includes(t))) {
+                        return matchesType && calidad === 'primera';
+                    }
+                    
+                    // Para tranquilla, no filtrar por calidad
+                    return matchesType;
                 });
+                
                 if (type.toLowerCase().includes('tranquilla')) unitLabel = 'ML';
             }
 
@@ -825,39 +824,26 @@
             };
 
             data.forEach(row => {
-                let esp, dimKey, val;
+                // Helper para obtener valor insensible a mayúsculas/variaciones
+                const getVal = (keys) => {
+                    for (const k of keys) if (row[k] !== undefined) return row[k];
+                    return '';
+                };
 
-                if (isAserrada) {
-                    esp = row['ESPECIE'] || 'Sin Especie';
-                    const grosor = formatDim(row['GROSOR'] || 'S/G');
-                    dimKey = grosor; // En aserrada agrupamos por grosor
-                    // Usar lógica robusta para obtener PT
-                    let ptVal = row['PIES TABLARES'] || row['PT'] || 0;
-                    if (typeof ptVal === 'string') ptVal = ptVal.replace(/,/g, '');
-                    val = parseFloat(ptVal) || 0;
-                } else {
-                    // Helper para obtener valor insensible a mayúsculas/variaciones
-                    const getVal = (keys) => {
-                        for (const k of keys) if (row[k] !== undefined) return row[k];
-                        return '';
-                    };
+                const esp = getVal(['Especie', 'ESPECIE', 'especie']) || 'Sin Especie';
+                const grosor = formatDim(getVal(['Grosor "', 'Grosor', 'GROSOR', 'grosor']));
+                const ancho = formatDim(getVal(['Ancho "', 'Ancho', 'ANCHO', 'ancho']));
+                const dimKey = `${grosor} x ${ancho}`;
+                
+                // Buscar M2 en varias columnas posibles
+                let m2Val = getVal(['M2', 'm2', 'Metros', 'M2_Total_Fardo']);
+                if (typeof m2Val === 'string') m2Val = m2Val.replace(/,/g, '');
+                const val = parseFloat(m2Val) || 0;
+                
+                const unidad = (getVal(['Unidad', 'UNIDAD', 'unidad']) || 'm2').toLowerCase();
 
-                    esp = getVal(['Especie', 'ESPECIE', 'especie']) || 'Sin Especie';
-                    const grosor = formatDim(getVal(['Grosor "', 'Grosor', 'GROSOR', 'grosor']));
-                    const ancho = formatDim(getVal(['Ancho "', 'Ancho', 'ANCHO', 'ancho']));
-                    dimKey = `${grosor} x ${ancho}`;
-                    
-                    // Buscar M2 en varias columnas posibles
-                    let m2Val = getVal(['M2', 'm2', 'Metros', 'M2_Total_Fardo']);
-                    if (typeof m2Val === 'string') m2Val = m2Val.replace(/,/g, '');
-                    val = parseFloat(m2Val) || 0;
-                    
-                    // Si es tranquilla, intentamos buscar ML si M2 es 0, o usamos M2 si es lo que hay
-                    const unidad = (getVal(['Unidad', 'UNIDAD', 'unidad']) || 'm2').toLowerCase();
-
-                    // Validar unidad para Tranquilla vs Otros
-                    if (unitLabel === 'M²' && unidad === 'ml') return; 
-                }
+                // Validar unidad para Tranquilla vs Otros
+                if (unitLabel === 'M²' && unidad === 'ml') return; 
 
                 if (val > 0) {
                     dimensions.add(dimKey);
