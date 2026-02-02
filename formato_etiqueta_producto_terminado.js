@@ -20,18 +20,18 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
 
     // --- CÓDIGO DE BARRAS ---
     // Ajustado a x=60 para que no se corte en el margen izquierdo
-    cmd += `BARCODE 60,20,"128",60,1,0,3,3,"${fardo.fardoNo}"\r\n`;
+    cmd += `BARCODE 60,20,"128",70,1,0,3,3,"${fardo.fardoNo}"\r\n`;
     
     // --- ENCABEZADOS ---
     // Usamos ROMAN.TTF para una apariencia más profesional y legible
-    cmd += `TEXT 400,125,"3",0,1,1,2,"Lote: ${fardo.lote}"\r\n`;
-    cmd += `TEXT 400,45,"3",0,2,2,2,"Fardo: ${fardo.fardoNo} - ${fardo.m2} M2"\r\n`;
+    cmd += `TEXT 350,125,"3",0,1,2,2,"Lote: ${fardo.lote}"\r\n`;
+    cmd += `TEXT 350,45,"3",0,2,2,2,"Fardo: ${fardo.fardoNo}"\r\n`;
 
     cmd += `BAR 40,155,720,3\r\n`; // Línea más gruesa (3) para mejor visibilidad
 
     // --- DETALLES DEL PRODUCTO ---
-    cmd += `TEXT 232,175,"3",0,1,1,2,"${fardo.producto}"\r\n`;
-    cmd += `TEXT 112,210,"3",0,1,1,2,"${fardo.grosor} x ${fardo.ancho} pulg - ${fardo.especie}"\r\n`;
+    cmd += `TEXT 323,175,"3",0,1,1,2,"${fardo.producto}"\r\n`;
+    cmd += `TEXT 212,210,"3",0,1,1,2,"${fardo.grosor} x ${fardo.ancho} pulg - ${fardo.especie}"\r\n`;
 
     cmd += `BAR 40,240,720,3\r\n`;
 
@@ -60,8 +60,8 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
     cmd += `BAR 40,515,720,3\r\n`;
     
     const totalPzs = fardo.detalles ? fardo.detalles.reduce((acc, d) => acc + d.piezas, 0) : 0;
-    cmd += `TEXT 60,540,"3",0,1,1,"TOTAL PIEZAS: ${totalPzs > 0 ? totalPzs : '-'}"\r\n`;
-    cmd += `TEXT 760,540,"3",0,1,1,3,"TOTAL: ${fardo.m2} M2"\r\n`;
+    cmd += `TEXT 112,540,"3",0,1,1,"TOTAL PIEZAS: ${totalPzs > 0 ? totalPzs : '-'}"\r\n`;
+    cmd += `TEXT 520,540,"3",0,1,1,3,"TOTAL: ${fardo.m2} M2"\r\n`;
 
     cmd += "PRINT 1,1\r\n";
 
