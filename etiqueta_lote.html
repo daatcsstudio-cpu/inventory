@@ -194,7 +194,7 @@
                 </div>
                 <div class="lbl-stat-box">
                     <span class="lbl-stat-val" id="printM2">0.00</span>
-                    <span class="lbl-stat-lbl">M2 Total</span>
+                    <span class="lbl-stat-lbl" id="lblTotalUnit">M2 Total</span>
                 </div>
             </div>
         </div>
@@ -267,9 +267,19 @@
         const grosor = formatearGrosor(info['Grosor "'] || info['Grosor'] || '');
         const ancho = info['Ancho "'] || info['Ancho'] || '';
         const medidas = (grosor && ancho) ? `${grosor}" x ${ancho}"` : 'Varios';
+        
+        // Detectar si es producto por ML
+        const prodName = (producto || '').toLowerCase();
+        const isML = prodName.includes('tranquilla') || prodName.includes('zocalo') || prodName.includes('deck');
+        const unitLabel = isML ? "ML" : "M2";
 
         fardosLote.forEach(f => {
-            totalM2 += parseFloat(f['M2']) || 0;
+            // Intentar leer ML si es producto ML, sino M2
+            let val = isML ? parseFloat(f['ML'] || f['ml'] || f['Ml']) : parseFloat(f['M2'] || f['m2']);
+            // Si es ML pero viene vacío (datos viejos), intentar leer M2 como respaldo
+            if (isML && isNaN(val)) val = parseFloat(f['M2'] || f['m2']);
+            
+            totalM2 += (val || 0);
             let pzs = parseInt(f['Piezas']) || parseInt(f['Total Piezas']) || 0;
             totalPiezas += pzs;
         });
@@ -281,7 +291,8 @@
             medidas: medidas,
             fardos: totalFardos,
             piezas: totalPiezas,
-            m2: totalM2.toFixed(2)
+            m2: totalM2.toFixed(2),
+            isML: isML // Guardamos flag para impresión
         };
 
         document.getElementById('printLote').innerText = lote;
@@ -291,6 +302,7 @@
         document.getElementById('printFardos').innerText = totalFardos;
         document.getElementById('printPiezas').innerText = totalPiezas > 0 ? totalPiezas : "-";
         document.getElementById('printM2').innerText = totalM2.toFixed(2);
+        document.getElementById('lblTotalUnit').innerText = unitLabel + " Total";
 
         const qrContainer = document.getElementById('qrcode');
         qrContainer.innerHTML = "";
@@ -333,6 +345,7 @@
         const d = currentLabelData;
         const encoder = new TextEncoder();
         let cmd = "";
+        const unitText = d.isML ? "ML TOTAL" : "M2 TOTAL";
 
         cmd += "SIZE 4,3\r\n";
         cmd += "GAP 0.12,0\r\n";
@@ -347,7 +360,7 @@
         cmd += `BAR 20,430,760,3\r\n`;
         cmd += `TEXT 130,450,"2",0,1,1,2,"FARDOS"\r\n`;
         cmd += `TEXT 400,450,"2",0,1,1,2,"PIEZAS"\r\n`;
-        cmd += `TEXT 670,450,"2",0,1,1,2,"M2 TOTAL"\r\n`;
+        cmd += `TEXT 670,450,"2",0,1,1,2,"${unitText}"\r\n`;
         cmd += `TEXT 130,480,"3",0,2,2,"${d.fardos}"\r\n`;
         cmd += `TEXT 400,480,"3",0,2,2,"${d.piezas}"\r\n`;
         cmd += `TEXT 630,480,"3",0,2,2,"${d.m2}"\r\n`;
