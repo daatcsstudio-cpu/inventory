@@ -24,14 +24,14 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
     
     // --- ENCABEZADOS ---
     // Usamos ROMAN.TTF para una apariencia más profesional y legible
-    cmd += `TEXT 400,125,"ROMAN.TTF",0,1,1,2,"Lote: ${fardo.lote}"\r\n`;
-    cmd += `TEXT 400,45,"ROMAN.TTF",0,2,2,2,"Fardo: ${fardo.fardoNo} - ${fardo.m2} M2"\r\n`;
+    cmd += `TEXT 400,125,"3",0,1,1,2,"Lote: ${fardo.lote}"\r\n`;
+    cmd += `TEXT 400,45,"3",0,2,2,2,"Fardo: ${fardo.fardoNo} - ${fardo.m2} M2"\r\n`;
 
     cmd += `BAR 40,155,720,3\r\n`; // Línea más gruesa (3) para mejor visibilidad
 
     // --- DETALLES DEL PRODUCTO ---
-    cmd += `TEXT 400,175,"3",0,1,1,2,"${fardo.producto}"\r\n`;
-    cmd += `TEXT 400,210,"3",0,1,1,2,"${fardo.grosor} x ${fardo.ancho} pulg - ${fardo.especie}"\r\n`;
+    cmd += `TEXT 232,175,"3",0,1,1,2,"${fardo.producto}"\r\n`;
+    cmd += `TEXT 112,210,"3",0,1,1,2,"${fardo.grosor} x ${fardo.ancho} pulg - ${fardo.especie}"\r\n`;
 
     cmd += `BAR 40,240,720,3\r\n`;
 
