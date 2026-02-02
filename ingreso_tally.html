@@ -8,7 +8,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
     
-    <script src="formato_etiqueta_producto_terminado.js"></script>
     <style>
         :root {
             --primary: #1A237E;
@@ -68,11 +67,13 @@
         .btn-main { background-color: var(--primary); color: white; }
         .btn-secondary { background-color: var(--text-dark); color: white; }
         
+        /* Botones de Impresión */
         .btn-bt { background-color: #e67e22; color: white; margin-bottom: 15px; }
         .btn-pc { background-color: var(--btn-pc); color: white; margin-top: 10px; }
         
         #btStatus { font-size: 0.8rem; text-align: center; margin-bottom: 5px; font-weight: bold; color: #95a5a6; }
 
+        /* Estilos Tabla Tally */
         .table-container {
             overflow-x: auto;
             margin-top: 20px;
@@ -96,7 +97,7 @@
             z-index: 2;
             color: #95a5a6;
         }
-        tbody th { /* Para la columna de Ancho */
+        tbody th {
             position: sticky;
             left: 0;
             background-color: #f2f2f2;
@@ -119,7 +120,7 @@
             background-color: #f0f4f8;
         }
 
-        /* --- ESTILOS DE IMPRESIÓN PC --- */
+        /* --- ESTILOS DE IMPRESIÓN PC (Etiqueta 4x3) --- */
         #printable-area { display: none; }
 
         @media print {
@@ -149,7 +150,7 @@
                 overflow: hidden;
             }
             
-            /* Estilos internos de la etiqueta PC */
+            /* Estilos internos de la etiqueta */
             .lbl-header { width: 100%; display: flex; justify-content: space-between; border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 5px; }
             .lbl-title { font-size: 1.1rem; font-weight: bold; }
             .lbl-sub { font-size: 2rem; font-weight: 900; line-height: 1; }
@@ -157,13 +158,13 @@
             .lbl-main { width: 100%; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; }
             .lbl-row { font-size: 1rem; font-weight: bold; margin: 2px 0; }
             .lbl-row span { font-weight: normal; }
+            .lbl-dims { font-size: 1.3rem; font-weight: 900; margin-top: 5px; padding-top: 5px; border-top: 1px solid black; }
             
             .lbl-footer { width: 100%; display: flex; justify-content: space-between; border-top: 2px solid black; padding-top: 5px; margin-top: auto; }
             .lbl-col-print { width: 48%; text-align: center; }
             .lbl-val { font-size: 1.4rem; font-weight: bold; }
             .lbl-head { font-size: 0.8rem; font-weight: bold; text-decoration: underline; }
             
-            /* Ajuste Barcode */
             .lbl-barcode { height: 45px; margin: 5px 0; width: 100%; }
         }
     </style>
@@ -258,7 +259,8 @@
         
         <button class="btn-main" onclick="guardarTally()" style="margin-top: 15px;">💾 Guardar en Nube</button>
     </div>
-</div>
+    
+    </div>
 
 <div id="printable-area"></div>
 
@@ -321,7 +323,6 @@
             selCalidad.appendChild(opt);
         });
 
-        // Auto-reconexión Bluetooth
         if (navigator.bluetooth && navigator.bluetooth.getDevices) {
             navigator.bluetooth.getDevices().then(devices => {
                 const myPrinter = devices.find(d => d.name && (d.name.includes('MTH') || d.name.includes('Printer')));
