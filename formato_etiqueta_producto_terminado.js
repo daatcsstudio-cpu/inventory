@@ -10,6 +10,10 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
     const encoder = new TextEncoder();
     let cmd = "";
 
+    // Detectar unidad (ML o M2)
+    const isML = (fardo.unidad && fardo.unidad.toLowerCase() === 'ml') || (fardo.producto && (fardo.producto.includes('Tranquilla') || fardo.producto.includes('Zocalo')));
+    const unitLabel = isML ? "ML" : "M2";
+
     // --- CONFIGURACIÓN DE LA ETIQUETA ---
     // Ajustado según Self-test de la MHT-L1081
     cmd += "SIZE 101 mm, 76 mm\r\n"; 
@@ -38,17 +42,32 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
     // --- TABLA DE PIEZAS ---
     cmd += `TEXT 60,260,"3",0,1,1,"LARGO"\r\n`;
     cmd += `TEXT 350,260,"3",0,1,1,"PIEZAS"\r\n`;
-    cmd += `TEXT 650,260,"3",0,1,1,"M2"\r\n`;
+    cmd += `TEXT 650,260,"3",0,1,1,"${unitLabel}"\r\n`;
+
+    // INTENTO DE RECUPERACIÓN DE DETALLES SI FALTAN (Para compatibilidad con datos planos de Sheets)
+    if (!fardo.detalles || fardo.detalles.length === 0) {
+        const pzs = parseInt(fardo.Piezas || fardo.piezas || 0);
+        const lrg = parseFloat(fardo.Largo || fardo.largo || fardo['Largo_Ft'] || fardo["Largo '"] || 0);
+        
+        if (pzs > 0 && lrg > 0) {
+            fardo.detalles = [{ piezas: pzs, largo: lrg }];
+        }
+    }
 
     let y = 295;
     if (fardo.detalles && fardo.detalles.length > 0) {
         fardo.detalles.forEach(d => {
             if (y < 510) { 
-                const m2_linea = d.piezas * (d.largo * 0.3048) * (fardo.ancho * 0.0254);
+                let metricVal = 0;
+                if (isML) {
+                    metricVal = d.piezas * (d.largo * 0.3048); // ML
+                } else {
+                    metricVal = d.piezas * (d.largo * 0.3048) * (fardo.ancho * 0.0254); // M2
+                }
                 
                 cmd += `TEXT 60,${y},"3",0,1,1,"${d.largo}"\r\n`;
                 cmd += `TEXT 350,${y},"3",0,1,1,"${d.piezas}"\r\n`;
-                cmd += `TEXT 650,${y},"3",0,1,1,"${m2_linea.toFixed(2)}"\r\n`;
+                cmd += `TEXT 650,${y},"3",0,1,1,"${metricVal.toFixed(2)}"\r\n`;
                 y += 35;
             }
         });
@@ -60,8 +79,10 @@ async function imprimirEtiquetaTerminado(printCharacteristic, fardo, silent = fa
     cmd += `BAR 40,515,720,3\r\n`;
     
     const totalPzs = fardo.detalles ? fardo.detalles.reduce((acc, d) => acc + d.piezas, 0) : 0;
+    // Usamos fardo.m2 o fardo.ml o fardo.M2 (remoto) para el total
+    const totalQty = fardo.m2 || fardo.ml || fardo.M2 || 0;
     cmd += `TEXT 130,540,"3",0,1,1,"TOTAL PIEZAS: ${totalPzs > 0 ? totalPzs : '-'}"\r\n`;
-    cmd += `TEXT 540,540,"3",0,1,1,3,"TOTAL: ${fardo.m2} M2"\r\n`;
+    cmd += `TEXT 540,540,"3",0,1,1,3,"TOTAL: ${totalQty} ${unitLabel}"\r\n`;
 
     cmd += "PRINT 1,1\r\n";
 

@@ -203,6 +203,7 @@
                     <option value="Piso Crudo">Crudo</option>
                     <option value="Tranquilla">Tranquilla</option>
                     <option value="Deck">Deck</option>
+                    <option value="Zocalo">Zocalo</option>
                 </select>
             </div>
             <div id="div-calidad" style="display: none;">
@@ -302,11 +303,23 @@
     function handleProductChange() {
         const prod = document.getElementById('producto').value;
         const divCalidad = document.getElementById('div-calidad');
+        const calidadSelect = document.getElementById('calidad');
         const anchoInput = document.getElementById('ancho');
 
-        // Mostrar Calidad si es Piso o Deck
+        // Mostrar Calidad si es Piso, Deck o Zocalo
         if (prod === 'Piso Barnizado' || prod === 'Piso Crudo' || prod === 'Deck') {
             divCalidad.style.display = 'block';
+            calidadSelect.innerHTML = `
+                <option value="Primera">Primera</option>
+                <option value="Segunda">Segunda</option>
+            `;
+        } else if (prod === 'Zocalo') {
+            divCalidad.style.display = 'block';
+            calidadSelect.innerHTML = `
+                <option value="Corte 45">Corte 45</option>
+                <option value="Italiano">Italiano</option>
+                <option value="Pecho Paloma">Pecho Paloma</option>
+            `;
         } else {
             divCalidad.style.display = 'none';
         }
@@ -722,6 +735,8 @@
         document.getElementById('loteId').value = f.lote;
         document.getElementById('fardoNo').value = f.fardoNo;
         document.getElementById('producto').value = f.producto;
+        handleProductChange(); // Actualizar opciones antes de setear valor
+
         document.getElementById('grosor').value = f.grosor;
         document.getElementById('ancho').value = f.ancho;
         document.getElementById('especie').value = f.especie;
@@ -732,8 +747,6 @@
         currentDetalles = [...f.detalles];
         renderDetalles();
 
-        handleProductChange(); // Actualizar visibilidad de Calidad
-        
         fardosData.splice(index, 1);
         guardarDatosLocales();
 

@@ -240,6 +240,17 @@
                             <p id="total-deck" class="text-2xl font-bold text-slate-800 mt-1">Cargando...</p>
                         </div>
 
+                        <!-- Card 6: Zocalo -->
+                        <div onclick="openModal('Zocalo')" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-pink-50 text-pink-600 rounded-lg group-hover:bg-pink-600 group-hover:text-white transition-colors">
+                                    <i data-lucide="panel-bottom" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                            <h3 class="text-slate-500 text-sm font-medium">Zocalo (ml)</h3>
+                            <p id="total-zocalo" class="text-2xl font-bold text-slate-800 mt-1">Cargando...</p>
+                        </div>
+
                         <!-- Card 4: Madera Aserrada -->
                         <div onclick="openModal('Madera Aserrada')" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 group">
                             <div class="flex items-center justify-between mb-4">
@@ -454,6 +465,7 @@
                     let totalBarnizadoM2 = 0;
                     let totalTranquillaML = 0;
                     let totalDeckM2 = 0;
+                    let totalZocaloML = 0;
 
                     // Helper para obtener valor numérico robusto (busca en varias llaves y limpia comas)
                     const getNum = (row, keys) => {
@@ -484,9 +496,14 @@
                             if (calidad === 'primera') totalBarnizadoM2 += metros;
                         } else if (producto.includes('deck')) {
                             if (calidad === 'primera') totalDeckM2 += metros;
+                        } else if (producto.includes('zocalo')) {
+                            // Leer columna ML si existe (nuevo script), sino usar M2
+                            const valML = getNum(row, ['ML', 'ml', 'Ml']);
+                            totalZocaloML += (valML > 0) ? valML : metros;
                         } else if (producto.includes('tranquilla')) {
-                            // Tranquilla no filtra por calidad, suma todo
-                            if (unidad === 'ml' || producto.includes('tranquilla')) totalTranquillaML += metros;
+                            const valML = getNum(row, ['ML', 'ml', 'Ml']);
+                            if (valML > 0) totalTranquillaML += valML;
+                            else if (unidad === 'ml' || producto.includes('tranquilla')) totalTranquillaML += metros;
                         }
                     });
 
@@ -502,6 +519,7 @@
                     document.getElementById('total-crudo').innerText = totalCrudoM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
                     document.getElementById('total-tranquilla').innerText = totalTranquillaML.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ml";
                     document.getElementById('total-deck').innerText = totalDeckM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m²";
+                    document.getElementById('total-zocalo').innerText = totalZocaloML.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ml";
                     document.getElementById('total-aserrada').innerText = totalPiesTablares.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " PT";
                 })
                 .catch(error => {
@@ -511,6 +529,7 @@
                     document.getElementById('total-crudo').innerText = errorMsg;
                     document.getElementById('total-tranquilla').innerText = errorMsg;
                     document.getElementById('total-deck').innerText = errorMsg;
+                    document.getElementById('total-zocalo').innerText = errorMsg;
                     document.getElementById('total-aserrada').innerText = errorMsg;
                 });
         }
@@ -717,7 +736,7 @@
                     return matchesType;
                 });
                 
-                if (type.toLowerCase().includes('tranquilla')) unitLabel = 'ML';
+                if (type.toLowerCase().includes('tranquilla') || type.toLowerCase().includes('zocalo')) unitLabel = 'ML';
             }
 
             // Agrupar datos

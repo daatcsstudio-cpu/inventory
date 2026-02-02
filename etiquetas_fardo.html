@@ -272,7 +272,7 @@
             }
 
             const pzs = parseInt(getVal(['Piezas', 'Total Piezas', 'Pzs'])) || 0;
-            const largo = parseFloat(getVal(['Largo', 'Largo_Ft', 'Largo (ft)'])) || 0;
+            const largo = parseFloat(getVal(['Largo', 'Largo_Ft', 'Largo (ft)', "Largo '"])) || 0;
             
             if (pzs > 0 && largo > 0) {
                 agrupado[key].detalles.push({ piezas: pzs, largo: largo });
