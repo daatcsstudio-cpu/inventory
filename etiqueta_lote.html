@@ -249,8 +249,7 @@
         const lote = document.getElementById('loteInput').value.trim();
         if (!lote) return alert("Ingresa un lote");
 
-        // Buscar por '# Lote' o 'Lote' para mayor compatibilidad
-        const fardosLote = inventario.filter(f => String(f['# Lote'] || f['Lote']) === String(lote));
+        const fardosLote = inventario.filter(f => String(f['# Lote']) === String(lote));
 
         if (fardosLote.length === 0) {
             alert("❌ No se encontraron fardos para el Lote: " + lote);
